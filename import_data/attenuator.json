@@ -1,0 +1,274 @@
+{
+  "attenuator": [
+    {
+      "itg_no": 1,
+      "element": "FE",
+      "wavelength": "271.4",
+      "att_value": 23
+    },
+    {
+      "itg_no": 2,
+      "element": "C",
+      "wavelength": "193.0",
+      "att_value": 34
+    },
+    {
+      "itg_no": 3,
+      "element": "SI",
+      "wavelength": "212.4",
+      "att_value": 33
+    },
+    {
+      "itg_no": 4,
+      "element": "MN1",
+      "wavelength": "293.3",
+      "att_value": 44
+    },
+    {
+      "itg_no": 5,
+      "element": "MN2",
+      "wavelength": "290.0",
+      "att_value": 56
+    },
+    {
+      "itg_no": 6,
+      "element": "P",
+      "wavelength": "178.3",
+      "att_value": 12
+    },
+    {
+      "itg_no": 7,
+      "element": "S",
+      "wavelength": "180.7",
+      "att_value": 13
+    },
+    {
+      "itg_no": 8,
+      "element": "NI1",
+      "wavelength": "231.6",
+      "att_value": 14
+    },
+    {
+      "itg_no": 9,
+      "element": "NI2",
+      "wavelength": "227.2",
+      "att_value": 24
+    },
+    {
+      "itg_no": 10,
+      "element": "CR1",
+      "wavelength": "267.7",
+      "att_value": 25
+    },
+    {
+      "itg_no": 11,
+      "element": "CR2",
+      "wavelength": "298.9",
+      "att_value": 45
+    },
+    {
+      "itg_no": 12,
+      "element": "MO",
+      "wavelength": "202.0",
+      "att_value": 32
+    },
+    {
+      "itg_no": 13,
+      "element": "AL",
+      "wavelength": "396.1",
+      "att_value": 12
+    },
+    {
+      "itg_no": 14,
+      "element": "V",
+      "wavelength": "311.0",
+      "att_value": 54
+    },
+    {
+      "itg_no": 15,
+      "element": "NB",
+      "wavelength": "319.4",
+      "att_value": 46
+    },
+    {
+      "itg_no": 16,
+      "element": "CU",
+      "wavelength": "327.3",
+      "att_value": 11
+    },
+    {
+      "itg_no": 17,
+      "element": "TI",
+      "wavelength": "337.2",
+      "att_value": 13
+    },
+    {
+      "itg_no": 18,
+      "element": "MG",
+      "wavelength": "280.2",
+      "att_value": 14
+    },
+    {
+      "itg_no": 19,
+      "element": "As",
+      "wavelength": "180.6",
+      "att_value": 15
+    },
+    {
+      "itg_no": 20,
+      "element": "Ar",
+      "wavelength": "210.4",
+      "att_value": 23
+    },
+    {
+      "itg_no": 21,
+      "element": "W",
+      "wavelength": "200.0",
+      "att_value": 21
+    },
+    {
+      "itg_no": 22,
+      "element": "22",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 23,
+      "element": "23",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 24,
+      "element": "24",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 25,
+      "element": "25",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 26,
+      "element": "26",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 27,
+      "element": "27",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 28,
+      "element": "28",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 29,
+      "element": "29",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 30,
+      "element": "30",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 31,
+      "element": "31",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 32,
+      "element": "32",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 33,
+      "element": "33",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 34,
+      "element": "34",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 35,
+      "element": "A",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 36,
+      "element": "B",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 37,
+      "element": "Z",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 38,
+      "element": "38",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 39,
+      "element": "39",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 40,
+      "element": "40",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 41,
+      "element": "41",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 42,
+      "element": "42",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 43,
+      "element": "D",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 44,
+      "element": "E",
+      "wavelength": "",
+      "att_value": 0
+    },
+    {
+      "itg_no": 45,
+      "element": "F",
+      "wavelength": "",
+      "att_value": 0
+    }
+  ]
+}

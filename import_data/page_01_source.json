@@ -1,0 +1,14 @@
+{
+  "purge_seq1": "0",
+  "source_seq1": "1: Normal Spark",
+  "source_seq2": "3: Combined Spark",
+  "source_seq3": "1: Normal Spark",
+  "source_clean": "5: Cleaning Spark",
+  "preburn_seq1": "3",
+  "preburn_seq2": "2",
+  "preburn_seq3": "4",
+  "integ_seq1": "1",
+  "integ_seq2": "0",
+  "integ_seq3": "3",
+  "clean_value": "5"
+}

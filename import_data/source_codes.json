@@ -1,0 +1,68 @@
+{
+  "source_codes": [
+    {
+      "entry_no": 0,
+      "name": "Fatigue Lamp"
+    },
+    {
+      "entry_no": 1,
+      "name": "Normal Spark"
+    },
+    {
+      "entry_no": 2,
+      "name": "High Power Spark"
+    },
+    {
+      "entry_no": 3,
+      "name": "Combined Spark"
+    },
+    {
+      "entry_no": 4,
+      "name": "Oscillation Spark"
+    },
+    {
+      "entry_no": 5,
+      "name": "Cleaning Spark"
+    },
+    {
+      "entry_no": 6,
+      "name": ""
+    },
+    {
+      "entry_no": 7,
+      "name": ""
+    },
+    {
+      "entry_no": 8,
+      "name": ""
+    },
+    {
+      "entry_no": 9,
+      "name": ""
+    },
+    {
+      "entry_no": 10,
+      "name": ""
+    },
+    {
+      "entry_no": 11,
+      "name": ""
+    },
+    {
+      "entry_no": 12,
+      "name": ""
+    },
+    {
+      "entry_no": 13,
+      "name": ""
+    },
+    {
+      "entry_no": 14,
+      "name": ""
+    },
+    {
+      "entry_no": 15,
+      "name": ""
+    }
+  ]
+}

@@ -1,0 +1,229 @@
+{
+  "master_elements": [
+    {
+      "itg_no": 1,
+      "ele_name": "FE",
+      "wavelength": "271.4"
+    },
+    {
+      "itg_no": 2,
+      "ele_name": "C",
+      "wavelength": "193.0"
+    },
+    {
+      "itg_no": 3,
+      "ele_name": "SI",
+      "wavelength": "212.4"
+    },
+    {
+      "itg_no": 4,
+      "ele_name": "MN1",
+      "wavelength": "293.3"
+    },
+    {
+      "itg_no": 5,
+      "ele_name": "MN2",
+      "wavelength": "290.0"
+    },
+    {
+      "itg_no": 6,
+      "ele_name": "P",
+      "wavelength": "178.3"
+    },
+    {
+      "itg_no": 7,
+      "ele_name": "S",
+      "wavelength": "180.7"
+    },
+    {
+      "itg_no": 8,
+      "ele_name": "NI1",
+      "wavelength": "231.6"
+    },
+    {
+      "itg_no": 9,
+      "ele_name": "NI2",
+      "wavelength": "227.2"
+    },
+    {
+      "itg_no": 10,
+      "ele_name": "CR1",
+      "wavelength": "267.7"
+    },
+    {
+      "itg_no": 11,
+      "ele_name": "CR2",
+      "wavelength": "298.9"
+    },
+    {
+      "itg_no": 12,
+      "ele_name": "MO",
+      "wavelength": "202.0"
+    },
+    {
+      "itg_no": 13,
+      "ele_name": "AL",
+      "wavelength": "396.1"
+    },
+    {
+      "itg_no": 14,
+      "ele_name": "V",
+      "wavelength": "311.0"
+    },
+    {
+      "itg_no": 15,
+      "ele_name": "NB",
+      "wavelength": "319.4"
+    },
+    {
+      "itg_no": 16,
+      "ele_name": "CU",
+      "wavelength": "327.3"
+    },
+    {
+      "itg_no": 17,
+      "ele_name": "TI",
+      "wavelength": "337.2"
+    },
+    {
+      "itg_no": 18,
+      "ele_name": "MG",
+      "wavelength": "280.2"
+    },
+    {
+      "itg_no": 19,
+      "ele_name": "As",
+      "wavelength": "180.6"
+    },
+    {
+      "itg_no": 20,
+      "ele_name": "Ar",
+      "wavelength": "210.4"
+    },
+    {
+      "itg_no": 21,
+      "ele_name": "W",
+      "wavelength": "200.0"
+    },
+    {
+      "itg_no": 22,
+      "ele_name": "22",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 23,
+      "ele_name": "23",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 24,
+      "ele_name": "24",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 25,
+      "ele_name": "25",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 26,
+      "ele_name": "26",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 27,
+      "ele_name": "27",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 28,
+      "ele_name": "28",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 29,
+      "ele_name": "29",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 30,
+      "ele_name": "30",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 31,
+      "ele_name": "31",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 32,
+      "ele_name": "32",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 33,
+      "ele_name": "33",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 34,
+      "ele_name": "34",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 35,
+      "ele_name": "A",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 36,
+      "ele_name": "B",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 37,
+      "ele_name": "Z",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 38,
+      "ele_name": "38",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 39,
+      "ele_name": "39",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 40,
+      "ele_name": "40",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 41,
+      "ele_name": "41",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 42,
+      "ele_name": "42",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 43,
+      "ele_name": "D",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 44,
+      "ele_name": "E",
+      "wavelength": ""
+    },
+    {
+      "itg_no": 45,
+      "ele_name": "F",
+      "wavelength": ""
+    }
+  ]
+}

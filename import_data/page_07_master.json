@@ -1,0 +1,184 @@
+{
+  "corrections": [
+    {
+      "element": "FE",
+      "name": "Fe",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "C",
+      "name": "C",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "SI",
+      "name": "Si",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "MN1",
+      "name": "Mn1",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "MN2",
+      "name": "Mn2",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "P",
+      "name": "P",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "S",
+      "name": "S",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "NI1",
+      "name": "Ni1",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "NI2",
+      "name": "Ni2",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "CR1",
+      "name": "Cr1",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "CR2",
+      "name": "Cr2",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "MO",
+      "name": "Mo",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "AL",
+      "name": "Al",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "V",
+      "name": "V",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "NB",
+      "name": "Nb",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "CU",
+      "name": "Cu",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "TI",
+      "name": "Ti",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    },
+    {
+      "element": "MG",
+      "name": "Mg",
+      "sample": "",
+      "target": 0.0,
+      "d1": 0.0,
+      "d2": 0.0,
+      "ac": 0.0,
+      "mc": 1.0
+    }
+  ]
+}
