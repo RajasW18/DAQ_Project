@@ -70,7 +70,24 @@ class GroqProvider:
                      # can be rejected by upstream browser-signature filters.
                      "User-Agent": "SpectraSoft-IndustrialBuilder/1.0"},
             method="POST")
-        return self._request(req)
+        try:
+            return self._request(req)
+        except ProviderError as exc:
+            if "json_validate_failed" not in str(exc):
+                raise
+            body.pop("response_format", None)
+            body["messages"][0]["content"] += (
+                "\nReturn exactly one valid JSON object with string keys dsl and explanation. "
+                "Do not use markdown fences."
+            )
+            retry = urllib.request.Request(
+                "https://api.groq.com/openai/v1/chat/completions",
+                data=json.dumps(body).encode("utf-8"),
+                headers={"Authorization": f"Bearer {self.api_key}",
+                         "Content-Type": "application/json",
+                         "User-Agent": "SpectraSoft-IndustrialBuilder/1.0"},
+                method="POST")
+            return self._request(retry)
 
     def generate_artifact(self, artifact_type: str, extension: str, prompt: str,
                           context: str = "") -> Dict[str, str]:
@@ -115,7 +132,7 @@ class GroqProvider:
             with urllib.request.urlopen(req, timeout=60) as response:
                 data = json.loads(response.read().decode("utf-8"))
             content = data["choices"][0]["message"]["content"]
-            value = json.loads(content)
+            value = _parse_json_object(content)
             if not isinstance(value, dict):
                 raise ValueError("Expected a JSON object.")
             return value
@@ -132,6 +149,26 @@ class GroqProvider:
         except (urllib.error.URLError, TimeoutError, KeyError, IndexError,
                 json.JSONDecodeError, ValueError) as exc:
             raise ProviderError(f"Could not get a valid JSON response from the LLM: {exc}") from exc
+
+
+def _parse_json_object(content):
+    if not isinstance(content, str):
+        raise ValueError("The model response was not text.")
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3].rstrip()
+    try:
+        value = json.loads(cleaned)
+    except json.JSONDecodeError:
+        start, end = cleaned.find("{"), cleaned.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        value = json.loads(cleaned[start:end + 1])
+    if not isinstance(value, dict):
+        raise ValueError("Expected a JSON object.")
+    return value
 
     @staticmethod
     def _request_text(req):
