@@ -957,8 +957,12 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
                 "provider": provider_name
             }
             if "artifact" in prompt.lower() or "generate" in prompt.lower():
-                artifact = provider.generate_artifact("firmware or integration artifact", ".draft", prompt, read_context())
-                response["artifact"] = artifact
+                try:
+                    artifact = provider.generate_artifact("firmware or integration artifact", ".draft", prompt, read_context())
+                    response["artifact"] = artifact
+                except Exception as exc:
+                    response["warning"] = f"{provider_name} plan succeeded, but artifact generation failed: {exc}"
+                    sys.stderr.write(f"[ForgeLab] Provider '{provider_name}' artifact error: {exc}\n")
             record_chat(user, "assistant", response["message"], provider_name, project_id)
             self.send_json(200, response)
         except Exception as exc:

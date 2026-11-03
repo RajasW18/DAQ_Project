@@ -670,6 +670,13 @@ def write_outputs(value: int):
 
         reply.innerHTML = `<span class="message-meta"><strong>${providerName}</strong> <time>now</time></span><div class="agent-body"></div>`;
         agentThread?.append(reply);
+        if (data.warning) {
+          const warning = document.createElement("p");
+          warning.className = "field-hint";
+          warning.textContent = data.warning;
+          reply.append(warning);
+          logActivity("AI", data.warning);
+        }
 
         const bodyEl = reply.querySelector(".agent-body");
         isStreaming = true;
