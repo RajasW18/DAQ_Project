@@ -7,6 +7,10 @@ services:
     envVars:
       - key: PORT
         value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: forgelab-db
+          property: connectionString
       - key: FRONTEND_URL
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -31,3 +35,6 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
+databases:
+  - name: forgelab-db
+    plan: free

@@ -10,4 +10,8 @@ pyserial==3.5
 pywin32-ctypes==0.2.3
 setuptools==82.0.1
 SQLAlchemy==2.0.36
+psycopg[binary]>=3.2,<4
 typing_extensions==4.15.0
+openpyxl>=3.1,<4
+pypdf>=5,<7
+platformio>=6.1,<7

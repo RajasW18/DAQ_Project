@@ -139,6 +139,40 @@ secrets. If a secret is exposed, revoke it and create a replacement.
 The provider selector exposes local, Ollama, Groq, and Gemini. Keep provider
 keys on the server and do not send them from browser code.
 
+## Full web-system architecture
+
+The web application uses a separate persistence layer in
+[web_database.py](web_database.py). It uses Render PostgreSQL when
+`DATABASE_URL` is present and a local `web.db` SQLite fallback for development.
+The existing [core/database.py](core/database.py) remains the desktop
+application's SQLite database.
+
+The web database stores:
+
+- OAuth/OTP users and profile fields (`avatar_url`, `bio`, `education`, and
+  `personal_background`)
+- Projects and project ownership
+- Project files and revision metadata
+- AI chat messages linked to the user and project
+- Audit-event records for future device/build operations
+
+For local hardware, run [local_agent.py](local_agent.py) on the computer with
+the ATmega2560 connected:
+
+```powershell
+$env:FORGELAB_AGENT_TOKEN = "generate-a-long-random-token"
+.\.venv\Scripts\python.exe local_agent.py
+```
+
+The agent listens only on `127.0.0.1`. It supports a build command and requires
+`confirm_flash=true` for a firmware upload. A browser/cloud integration should
+pair an authenticated user to this agent before sending commands; the Render
+server cannot directly access a user's USB port.
+
+AI chat is now authentication-protected and persisted. File writes and device
+flashing should remain approval-based: the production IDE must show a diff,
+record the approval, and then send a command to the local agent.
+
 ## Standalone Industrial Control Builder
 
 Launch the standalone app from the repository root:

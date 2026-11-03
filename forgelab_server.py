@@ -64,6 +64,47 @@ load_project_env()
 AUTH_SECRET = os.getenv("AUTH_SECRET", "").strip() or secrets.token_hex(32)
 
 
+def persist_user(user_data: dict) -> dict:
+    from web_database import get_or_create_user, get_web_session
+    session = get_web_session()
+    try:
+        user = get_or_create_user(session, user_data)
+        user_data = dict(user_data)
+        user_data["id"] = user.id
+        return user_data
+    finally:
+        session.close()
+
+
+def initialize_web_database():
+    try:
+        from web_database import init_web_db
+        init_web_db()
+    except Exception as exc:
+        sys.stderr.write(f"[ForgeLab DB] Web database unavailable: {exc}\n")
+
+
+def record_chat(user: dict, role: str, content: str, provider: str = "local") -> None:
+    from web_database import ChatMessage, Project, get_web_session
+    session = get_web_session()
+    try:
+        project = session.query(Project).filter_by(owner_id=user["id"]).order_by(Project.id).first()
+        if project is None:
+            project = Project(owner_id=user["id"], name="My ForgeLab Workspace")
+            session.add(project)
+            session.flush()
+        session.add(ChatMessage(
+            project_id=project.id,
+            user_id=user["id"],
+            role=role,
+            content=content[:50000],
+            provider=provider,
+        ))
+        session.commit()
+    finally:
+        session.close()
+
+
 def read_context() -> str:
     sections = []
     total_chars = 0
@@ -361,6 +402,12 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        if path in {"/workspace", "/workspace.html"} and session_user(self) is None:
+            self.send_response(302)
+            self.send_header("Location", "/login")
+            self.end_headers()
+            return
+
         if path == "/auth/google":
             self.start_google_auth()
             return
@@ -377,6 +424,14 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         if path == "/api/auth/me":
             user = session_user(self)
             self.send_json(200, {"authenticated": bool(user), "user": user})
+            return
+
+        if path == "/api/profile":
+            self.handle_profile_get()
+            return
+
+        if path == "/api/projects":
+            self.handle_projects_get()
             return
 
         # 2. Workspace File Listing
@@ -430,6 +485,14 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             self.handle_auth_logout()
             return
 
+        if path == "/api/profile":
+            self.handle_profile_update(raw)
+            return
+
+        if path == "/api/projects":
+            self.handle_project_create(raw)
+            return
+
         self.send_json(404, {"error": "Unknown ForgeLab endpoint."})
 
     def send_status(self):
@@ -471,6 +534,94 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             }
         })
 
+    def handle_profile_get(self):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        from web_database import get_web_session, User
+        session = get_web_session()
+        try:
+            profile = session.get(User, user["id"])
+            if not profile:
+                self.send_json(404, {"error": "Profile not found."})
+                return
+            self.send_json(200, {
+                "id": profile.id, "email": profile.email, "name": profile.name,
+                "avatar_url": profile.avatar_url, "bio": profile.bio,
+                "education": profile.education,
+                "personal_background": profile.personal_background,
+            })
+        finally:
+            session.close()
+
+    def handle_profile_update(self, raw: bytes):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": f"Invalid profile request: {exc}"})
+            return
+        from web_database import get_web_session, User
+        session = get_web_session()
+        try:
+            profile = session.get(User, user["id"])
+            if not profile:
+                self.send_json(404, {"error": "Profile not found."})
+                return
+            for field in ("name", "avatar_url", "bio", "education", "personal_background"):
+                if field in data:
+                    setattr(profile, field, str(data[field])[:10000])
+            session.commit()
+            self.send_json(200, {"success": True, "message": "Profile updated."})
+        finally:
+            session.close()
+
+    def handle_projects_get(self):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        from web_database import get_web_session, Project
+        session = get_web_session()
+        try:
+            projects = session.query(Project).filter_by(owner_id=user["id"]).order_by(Project.updated_at.desc()).all()
+            self.send_json(200, {"projects": [
+                {"id": p.id, "name": p.name, "description": p.description,
+                 "created_at": p.created_at.isoformat(), "updated_at": p.updated_at.isoformat()}
+                for p in projects
+            ]})
+        finally:
+            session.close()
+
+    def handle_project_create(self, raw: bytes):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            name = str(data.get("name", "")).strip()
+            description = str(data.get("description", "")).strip()
+            if not name or len(name) > 200:
+                self.send_json(400, {"error": "Project name is required and must be 200 characters or fewer."})
+                return
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": f"Invalid project request: {exc}"})
+            return
+        from web_database import get_web_session, Project
+        session = get_web_session()
+        try:
+            project = Project(owner_id=user["id"], name=name, description=description[:10000])
+            session.add(project)
+            session.commit()
+            self.send_json(201, {"id": project.id, "name": project.name, "description": project.description})
+        finally:
+            session.close()
+
     def workspace_files(self):
         files = []
         for name, path in SOURCE_FILES.items():
@@ -509,6 +660,10 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         })
 
     def handle_chat(self, raw: bytes):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
         try:
             request = json.loads(raw.decode("utf-8"))
             prompt = str(request.get("prompt", "")).strip()
@@ -521,10 +676,12 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         if not prompt:
             self.send_json(400, {"error": "A prompt is required."})
             return
+        record_chat(user, "user", prompt, provider_name)
 
         # If user explicitly wants local engine or if external provider fails, use authoritative local engine
         if provider_name in {"local", "heuristic", "mock"}:
             response = fallback_agent_response(prompt)
+            record_chat(user, "assistant", response["message"], response.get("provider", "local"))
             self.send_json(200, response)
             return
 
@@ -550,12 +707,14 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             if "artifact" in prompt.lower() or "generate" in prompt.lower():
                 artifact = provider.generate_artifact("firmware or integration artifact", ".draft", prompt, read_context())
                 response["artifact"] = artifact
+            record_chat(user, "assistant", response["message"], provider_name)
             self.send_json(200, response)
         except Exception as exc:
             # Graceful fallback: return domain-aware local response instead of 502 crash!
             sys.stderr.write(f"[ForgeLab] External provider '{provider_name}' error: {exc}. Using local engine.\n")
             fallback = fallback_agent_response(prompt)
             fallback["warning"] = f"External LLM ({provider_name}) offline: {exc}. Served via local hardware engine."
+            record_chat(user, "assistant", fallback["message"], "local")
             self.send_json(200, fallback)
 
     def handle_simulate(self, raw: bytes):
@@ -665,6 +824,7 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             return
         try:
             user = google_token_user(code, config)
+            user = persist_user(user)
             token = create_session(user)
             self.send_response(302)
             self.send_header("Location", f"{config['frontend_url']}/workspace.html")
@@ -739,6 +899,7 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
                 "name": name,
                 "provider": "smtp-otp"
             }
+            user = persist_user(user)
             self.send_json(200, {
                 "success": True,
                 "user": user,
@@ -813,6 +974,7 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    initialize_web_database()
     port = int(os.getenv("PORT", sys.argv[1] if len(sys.argv) > 1 else "8765"))
     host = os.getenv("HOST", "0.0.0.0")
     print(f"ForgeLab workspace server starting on http://{host}:{port}")
