@@ -59,6 +59,7 @@ class GroqProvider:
                 })
         messages.append({"role": "user", "content": user[:14000]})
         body = {"model": self.model, "temperature": 0.1,
+                "max_completion_tokens": 1200,
                 "response_format": {"type": "json_object"},
                 "messages": messages}
         req = urllib.request.Request(
@@ -77,8 +78,8 @@ class GroqProvider:
                 raise
             body.pop("response_format", None)
             body["messages"][0]["content"] += (
-                "\nReturn exactly one valid JSON object with string keys dsl and explanation. "
-                "Do not use markdown fences."
+                "\nReturn exactly one compact valid JSON object with string keys dsl and explanation. "
+                "Keep explanation under 300 words. Do not use markdown fences."
             )
             retry = urllib.request.Request(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -87,7 +88,25 @@ class GroqProvider:
                          "Content-Type": "application/json",
                          "User-Agent": "SpectraSoft-IndustrialBuilder/1.0"},
                 method="POST")
-            return self._request(retry)
+            try:
+                return self._request(retry)
+            except ProviderError:
+                compact_body = {
+                    "model": self.model,
+                    "temperature": 0.1,
+                    "max_completion_tokens": 900,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "Return only compact valid JSON with exactly two string keys: "
+                                "dsl and explanation. Keep explanation under 180 words."
+                            ),
+                        },
+                        {"role": "user", "content": user[:9000]},
+                    ],
+                }
+                return self._request(self._groq_request(compact_body))
 
     def generate_artifact(self, artifact_type: str, extension: str, prompt: str,
                           context: str = "") -> Dict[str, str]:
