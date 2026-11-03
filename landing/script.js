@@ -899,13 +899,89 @@ def write_outputs(value: int):
 
   /* ── Auth Dialog ── */
   const authDialog = document.querySelector(".auth-dialog");
+  const profileDialog = document.querySelector(".profile-dialog");
   const authForm = document.querySelector("[data-auth-form]");
   const authCodeStep = document.querySelector("[data-auth-code-step]");
   const authGoogleButton = document.querySelector(".auth-google-button");
   let authEmail = "";
+  let currentUser = null;
   if (authGoogleButton) authGoogleButton.href = `${API_BASE}/auth/google`;
-  document.querySelector("[data-open-auth]")?.addEventListener("click", () => authDialog?.showModal());
+  const userButton = document.querySelector("[data-open-auth]");
+  userButton?.addEventListener("click", () => {
+    if (currentUser) {
+      loadProfile();
+      profileDialog?.showModal();
+    } else {
+      authDialog?.showModal();
+    }
+  });
   document.querySelector("[data-close-auth]")?.addEventListener("click", () => authDialog?.close());
+  document.querySelector("[data-close-profile]")?.addEventListener("click", () => profileDialog?.close());
+
+  function setUserButton(user) {
+    currentUser = user || null;
+    if (!userButton) return;
+    userButton.textContent = user?.name ? user.name.slice(0, 2).toUpperCase() : "RW";
+    userButton.title = user ? `Signed in as ${user.name}` : "Sign in";
+  }
+
+  async function loadProfile() {
+    const status = document.querySelector("[data-profile-status]");
+    try {
+      const response = await fetch(`${API_BASE}/api/profile`, { credentials: "include" });
+      const profile = await response.json();
+      if (!response.ok) throw new Error(profile.error || "Could not load profile.");
+      for (const [field, value] of Object.entries(profile)) {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) input.value = value || "";
+      }
+      const email = document.querySelector("[data-profile-email]");
+      if (email) email.textContent = profile.email;
+      if (status) status.textContent = "";
+    } catch (error) {
+      if (status) status.textContent = error.message;
+    }
+  }
+
+  document.querySelector("[data-profile-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = document.querySelector("[data-profile-status]");
+    const form = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    if (status) status.textContent = "Saving…";
+    try {
+      const response = await fetch(`${API_BASE}/api/profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not save profile.");
+      currentUser = { ...currentUser, name: payload.name };
+      setUserButton(currentUser);
+      if (status) status.textContent = "Profile saved.";
+    } catch (error) {
+      if (status) status.textContent = error.message;
+    }
+  });
+
+  document.querySelector("[data-logout]")?.addEventListener("click", async () => {
+    await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", credentials: "include" });
+    setUserButton(null);
+    profileDialog?.close();
+    showToast("Signed out.");
+  });
+
+  async function loadAuthState() {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
+      const result = await response.json();
+      if (result.authenticated) setUserButton(result.user);
+    } catch (error) {
+      logActivity("AUTH", `Could not load account state: ${error.message}`);
+    }
+  }
   authForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const st = document.querySelector("[data-auth-status]");
@@ -943,7 +1019,7 @@ def write_outputs(value: int):
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Could not verify the code.");
       if (st) st.textContent = `Signed in as ${result.user.name}.`;
-      document.querySelector("[data-open-auth]").textContent = result.user.name.slice(0, 2).toUpperCase();
+      setUserButton(result.user);
       setTimeout(() => authDialog?.close(), 500);
     } catch (error) {
       if (st) st.textContent = error.message;
@@ -954,6 +1030,7 @@ def write_outputs(value: int):
   renderEditor();
   renderArtifacts();
   checkServer();
+  loadAuthState();
   // Poll periodically to keep connection live
   setInterval(() => checkServer(false), 5000);
 

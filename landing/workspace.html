@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="ForgeLab is an AI-assisted engineering workspace for adapting generic 16-bit I/O hardware to real instruments." />
     <title>ForgeLab | Hardware-aware AI workspace</title>
-    <link rel="stylesheet" href="styles.css?v=6" />
-    <script defer src="script.js?v=6"></script>
+    <link rel="stylesheet" href="styles.css?v=7" />
+    <script defer src="script.js?v=7"></script>
   </head>
   <body>
     <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -32,7 +32,7 @@
         </button>
         <span class="save-state"><span class="save-dot"></span> Local draft</span>
         <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
-        <button class="user-button" type="button" data-open-auth>RW</button>
+        <button class="user-button" type="button" data-open-auth aria-label="Open account">RW</button>
       </div>
     </header>
 
@@ -160,6 +160,31 @@
           <button class="primary-button" type="button" data-verify-auth>Verify and sign in</button>
         </div>
         <p class="field-hint" data-auth-status>Use Google or receive a one-time code by email.</p>
+      </form>
+    </dialog>
+
+    <dialog class="profile-dialog" aria-labelledby="profile-title">
+      <div class="dialog-head">
+        <div><p class="eyebrow">Your account</p><h2 id="profile-title">Profile</h2></div>
+        <button class="dialog-close" type="button" data-close-profile aria-label="Close profile">×</button>
+      </div>
+      <form class="profile-form" data-profile-form>
+        <label for="profile-name">Name</label>
+        <input id="profile-name" name="name" type="text" maxlength="200" required />
+        <label for="profile-avatar">Profile photo URL</label>
+        <input id="profile-avatar" name="avatar_url" type="url" maxlength="1000" placeholder="https://..." />
+        <label for="profile-bio">Bio</label>
+        <textarea id="profile-bio" name="bio" rows="3" maxlength="10000" placeholder="Tell your collaborators about yourself"></textarea>
+        <label for="profile-education">Educational background</label>
+        <textarea id="profile-education" name="education" rows="3" maxlength="10000" placeholder="Degrees, courses, or areas of study"></textarea>
+        <label for="profile-background">Personal background</label>
+        <textarea id="profile-background" name="personal_background" rows="3" maxlength="10000" placeholder="Optional personal context"></textarea>
+        <p class="field-hint" data-profile-email></p>
+        <div class="profile-actions">
+          <button class="primary-button" type="submit">Save profile</button>
+          <button class="outline-button" type="button" data-logout>Sign out</button>
+        </div>
+        <p class="field-hint" data-profile-status aria-live="polite"></p>
       </form>
     </dialog>
   </body>

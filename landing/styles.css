@@ -374,7 +374,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 .toast.is-visible { opacity: 1; transform: translateY(0) scale(1); }
 
-.auth-dialog { width: min(430px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); }
+.auth-dialog, .profile-dialog { width: min(430px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); }
 dialog::backdrop { background: rgb(0 0 0 / .72); backdrop-filter: blur(6px); }
 .dialog-head { display: flex; justify-content: space-between; }
 .dialog-head h2 { margin: 0; font-size: 28px; }
@@ -389,6 +389,12 @@ dialog::backdrop { background: rgb(0 0 0 / .72); backdrop-filter: blur(6px); }
 .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--muted); font-size: 12px; }
 .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .auth-code-step { display: grid; gap: 8px; margin-top: 8px; }
+.profile-form { display: grid; gap: 8px; margin-top: 18px; }
+.profile-form label { font-size: 12px; font-weight: 700; }
+.profile-form input, .profile-form textarea { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--text); resize: vertical; }
+.profile-actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.profile-actions .primary-button, .profile-actions .outline-button { flex: 1; margin: 0; }
+.profile-actions .outline-button { padding: 10px; }
 
 /* ── Backend Connection Badge ── */
 .server-badge {
