@@ -87,11 +87,15 @@ def initialize_web_database():
         return False
 
 
-def record_chat(user: dict, role: str, content: str, provider: str = "local") -> None:
+def record_chat(user: dict, role: str, content: str, provider: str = "local", project_id: int | None = None) -> None:
     from web_database import ChatMessage, Project, get_web_session
     session = get_web_session()
     try:
-        project = session.query(Project).filter_by(owner_id=user["id"]).order_by(Project.id).first()
+        project = session.get(Project, project_id) if project_id else None
+        if project is not None and project.owner_id != user["id"]:
+            project = None
+        if project is None:
+            project = session.query(Project).filter_by(owner_id=user["id"]).order_by(Project.id).first()
         if project is None:
             project = Project(owner_id=user["id"], name="My ForgeLab Workspace")
             session.add(project)
@@ -449,6 +453,10 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             self.handle_projects_get()
             return
 
+        if path == "/api/chat/history":
+            self.handle_chat_history(parse_qs(urlparse(self.path).query))
+            return
+
         # 2. Workspace File Listing
         if path == "/api/workspace":
             self.send_json(200, {
@@ -653,6 +661,37 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         finally:
             session.close()
 
+    def handle_chat_history(self, query: dict):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        project_id = query.get("project_id", [None])[0]
+        from web_database import ChatMessage, Project, get_web_session
+        session = get_web_session()
+        try:
+            project = session.get(Project, int(project_id)) if project_id else None
+            if project is not None and project.owner_id != user["id"]:
+                self.send_json(403, {"error": "That project does not belong to this account."})
+                return
+            if project is None:
+                project = session.query(Project).filter_by(owner_id=user["id"]).order_by(Project.id).first()
+            if project is None:
+                self.send_json(200, {"messages": []})
+                return
+            messages = session.query(ChatMessage).filter_by(
+                project_id=project.id, user_id=user["id"]
+            ).order_by(ChatMessage.created_at.asc()).limit(200).all()
+            self.send_json(200, {"project_id": project.id, "messages": [
+                {"role": message.role, "content": message.content,
+                 "provider": message.provider, "created_at": message.created_at.isoformat()}
+                for message in messages
+            ]})
+        except (TypeError, ValueError):
+            self.send_json(400, {"error": "project_id must be a valid project ID."})
+        finally:
+            session.close()
+
     def workspace_files(self):
         files = []
         for name, path in SOURCE_FILES.items():
@@ -707,12 +746,18 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         if not prompt:
             self.send_json(400, {"error": "A prompt is required."})
             return
-        record_chat(user, "user", prompt, provider_name)
+        project_id = request.get("project_id")
+        try:
+            project_id = int(project_id) if project_id is not None else None
+        except (TypeError, ValueError):
+            self.send_json(400, {"error": "project_id must be a valid project ID."})
+            return
+        record_chat(user, "user", prompt, provider_name, project_id)
 
         # If user explicitly wants local engine or if external provider fails, use authoritative local engine
         if provider_name in {"local", "heuristic", "mock"}:
             response = fallback_agent_response(prompt)
-            record_chat(user, "assistant", response["message"], response.get("provider", "local"))
+            record_chat(user, "assistant", response["message"], response.get("provider", "local"), project_id)
             self.send_json(200, response)
             return
 
@@ -738,14 +783,14 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             if "artifact" in prompt.lower() or "generate" in prompt.lower():
                 artifact = provider.generate_artifact("firmware or integration artifact", ".draft", prompt, read_context())
                 response["artifact"] = artifact
-            record_chat(user, "assistant", response["message"], provider_name)
+            record_chat(user, "assistant", response["message"], provider_name, project_id)
             self.send_json(200, response)
         except Exception as exc:
             # Graceful fallback: return domain-aware local response instead of 502 crash!
             sys.stderr.write(f"[ForgeLab] External provider '{provider_name}' error: {exc}. Using local engine.\n")
             fallback = fallback_agent_response(prompt)
             fallback["warning"] = f"External LLM ({provider_name}) offline: {exc}. Served via local hardware engine."
-            record_chat(user, "assistant", fallback["message"], "local")
+            record_chat(user, "assistant", fallback["message"], "local", project_id)
             self.send_json(200, fallback)
 
     def handle_simulate(self, raw: bytes):

@@ -604,7 +604,7 @@ def write_outputs(value: int):
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptText, conversation: [], provider })
+        body: JSON.stringify({ prompt: promptText, conversation: [], provider, project_id: activeProjectId })
       });
 
       thinking.remove();
@@ -905,6 +905,79 @@ def write_outputs(value: int):
   const authGoogleButton = document.querySelector(".auth-google-button");
   let authEmail = "";
   let currentUser = null;
+  let activeProjectId = null;
+
+  async function loadProjects() {
+    try {
+      const response = await fetch(`${API_BASE}/api/projects`, { credentials: "include" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not load projects.");
+      const select = document.querySelector("[data-project-select]");
+      if (!select) return;
+      if (!result.projects.length) {
+        const createResponse = await fetch(`${API_BASE}/api/projects`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name: "My ForgeLab Workspace", description: "Personal ForgeLab workspace" })
+        });
+        const created = await createResponse.json();
+        if (!createResponse.ok) throw new Error(created.error || "Could not create your workspace.");
+        result.projects.push(created);
+      }
+      select.replaceChildren();
+      result.projects.forEach((project) => select.append(new Option(project.name, project.id)));
+      activeProjectId = activeProjectId || result.projects[0].id;
+      select.value = String(activeProjectId);
+      await loadChatHistory();
+    } catch (error) {
+      logActivity("PROJECT", error.message);
+    }
+  }
+
+  async function loadChatHistory() {
+    if (!activeProjectId || !agentThread) return;
+    const response = await fetch(`${API_BASE}/api/chat/history?project_id=${encodeURIComponent(activeProjectId)}`, { credentials: "include" });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Could not load chat history.");
+    agentThread.querySelectorAll(".agent-message").forEach((message) => message.remove());
+    result.messages.forEach((message) => {
+      const item = document.createElement("div");
+      item.className = `agent-message ${message.role === "user" ? "user-message" : "agent-response"}`;
+      const label = message.role === "user" ? "You" : escapeHtml(message.provider || "ForgeLab");
+      item.innerHTML = `<span class="message-meta">${label} <time>${new Date(message.created_at).toLocaleString()}</time></span><div class="agent-body">${message.role === "user" ? `<p class="md-p">${escapeHtml(message.content)}</p>` : formatMarkdown(message.content)}</div>`;
+      agentThread.insertBefore(item, agentThread.querySelector(".agent-task"));
+    });
+  }
+
+  document.querySelector("[data-project-select]")?.addEventListener("change", async (event) => {
+    activeProjectId = Number(event.target.value);
+    try {
+      await loadChatHistory();
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
+
+  document.querySelector("[data-create-project]")?.addEventListener("click", async () => {
+    const name = window.prompt("Project name");
+    if (!name?.trim()) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/projects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim() })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not create project.");
+      activeProjectId = result.id;
+      await loadProjects();
+      showToast(`Created project: ${result.name}`);
+    } catch (error) {
+      showToast(error.message);
+    }
+  });
   if (authGoogleButton) authGoogleButton.href = `${API_BASE}/auth/google`;
   const userButton = document.querySelector("[data-open-auth]");
   userButton?.addEventListener("click", () => {
@@ -978,6 +1051,7 @@ def write_outputs(value: int):
       const response = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
       const result = await response.json();
       if (result.authenticated) setUserButton(result.user);
+      if (result.authenticated) await loadProjects();
     } catch (error) {
       logActivity("AUTH", `Could not load account state: ${error.message}`);
     }
