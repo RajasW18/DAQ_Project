@@ -1,5 +1,92 @@
 # SpectraSoft System Updates
 
+## Deploy ForgeLab
+
+ForgeLab is now deployable as one container: the Python server serves both the
+landing pages and API, and listens on `0.0.0.0:$PORT`.
+
+### Local production-like run
+
+1. Copy `.env.example` to `.env` and fill in provider/auth values. Use a
+   Google **App Password** for `SMTP_PASSWORD`, not the Gmail account password.
+2. In Google Cloud Console, create a Web OAuth client and add
+   `http://localhost:8765/auth/google/callback` as an authorized redirect URI.
+3. Start the server:
+
+   ```powershell
+   .\.venv\Scripts\python.exe forgelab_server.py
+   ```
+
+4. Open `http://localhost:8765/login`.
+
+### Free deployment
+
+Render can deploy the included `render.yaml` and `Dockerfile` on its free web
+service. Set `FRONTEND_URL` to the public Render URL and
+`GOOGLE_REDIRECT_URI` to `<public-url>/auth/google/callback`, then add the
+same callback URL in Google Cloud Console. Add all secrets in Render's
+environment settings; never commit `.env`.
+
+### AI providers
+
+- **ForgeLab Local Engine** is always free and requires no key.
+- **Ollama** is free locally: install Ollama and pull `llama3.2`.
+- **Gemini** has a free API tier in eligible regions; set `GEMINI_API_KEY`.
+- **Groq** offers a free developer tier with rate limits; set `GROQ_API_KEY`.
+
+The provider selector exposes local, Ollama, Groq, and Gemini. Keep provider
+keys on the server and do not send them from browser code.
+
+## Standalone Industrial Control Builder
+
+Launch the standalone app from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe standalone_main.py
+```
+
+It opens independently of SpectraSoft and targets
+the supplied ATmega2560 O/A/B/I/T firmware without editing or flashing its
+`.ino` source. See [STANDALONE_README.md](STANDALONE_README.md) for setup and
+hardware details. Simulation is the default; live actions require confirmation.
+
+The standalone app also has a **Generate Artifact** tab for user-directed
+drafts of Python, Arduino, C++, Markdown, JSON, CSV templates, SVG, and text
+files. Generated text is reviewable/editable, saved as a new file, and never
+executed or flashed by the app. The original firmware remains unchanged.
+
+### ForgeLab local workspace
+
+ForgeLab is an optional browser workspace for inspecting the real project
+context and creating reviewable AI drafts:
+
+```powershell
+.\.venv\Scripts\python.exe forgelab_server.py
+```
+
+Open `http://127.0.0.1:8765/`. The server keeps Groq credentials local,
+proxies Ollama or Groq requests, maps `firmware.ino` to the authoritative
+`firmware/src/main.cpp`, and never writes source files or executes hardware
+actions. Uploads and generated artifacts remain reviewable browser drafts.
+
+## Industrial Control Builder
+
+Open **Industrial Control → AI Control Builder** from the desktop app. The first implementation supports:
+
+- Groq hosted planning (`GROQ_API_KEY`, optional `GROQ_MODEL`) or a local Ollama endpoint (`OLLAMA_URL`, `OLLAMA_MODEL`). Install Ollama, download a model, and leave its local server running; default model is `llama3.2`.
+- Document context from TXT, JSON, CSV, XLSX/XLSM, DOCX, PDF, and image references. PDF text extraction uses `pypdf`; Excel analysis uses `openpyxl`. Images are currently recorded as references only; OCR/vision extraction is not implemented.
+- Compact, allow-listed DSL plans. The model does not create or execute Python. Plans are validated locally, displayed for editing, and hardware execution asks for approval.
+- CSV and Excel numeric-table analysis using deterministic filters, calibration, statistics, regressions, derivatives, integration, and peak detection. Select Y and optional X columns in the page.
+- PlatformIO build and explicitly confirmed firmware upload for the workspace firmware project.
+
+Install the added document-analysis packages with `python -m pip install -r requirements.txt`. For Groq, set `GROQ_API_KEY` in the environment before starting the application. For Ollama, configure `OLLAMA_MODEL` to a model already installed locally.
+
+### Firmware compatibility
+
+The builder's live execution and PlatformIO upload target `firmware/`, which implements `PIN`, `W`, `SEQ_ADD`, `SEQ_RUN`, and related commands. The spectroscopy sketch supplied separately uses `O,<port>,<hex>`, `I`, and `T`; it does not implement the sequence-buffer commands. Those firmware protocols are not interchangeable. The UI calls out the required protocol before live use. Do not upload or execute against a board until the installed firmware and selected COM port are confirmed.
+
+The builder currently compiles fixed workspace firmware; it does not let the LLM rewrite firmware source. Firmware changes should be reviewed in code and rebuilt before upload.
+
 This document outlines the recent modifications made to the SpectraSoft application to address display sizing, data formatting, and High Voltage (HV) channel addressing issues.
 
 ## 1. CSV Data Storage Organization by Channel

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="ForgeLab is an AI-assisted engineering workspace for adapting generic 16-bit I/O hardware to real instruments." />
+    <title>ForgeLab | Hardware-aware AI workspace</title>
+    <link rel="stylesheet" href="styles.css?v=6" />
+    <script defer src="script.js?v=6"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#workspace">Skip to workspace</a>
+    <header class="topbar">
+      <div class="brand">
+        <img src="../spectra.jpg" alt="ForgeLab logo" />
+        <div>
+          <strong>ForgeLab</strong>
+          <span>AI hardware workspace</span>
+        </div>
+      </div>
+      <div class="workspace-title">
+        <a href="index.html">← Overview</a>
+        <span class="project-dot"></span>
+        <span>spectroscopy-adapter</span>
+        <span class="muted">/</span>
+        <span class="muted">main</span>
+      </div>
+      <div class="top-actions">
+        <button class="server-badge" type="button" data-server-badge aria-live="polite" title="Click to test backend connection">
+          <span class="status-dot"></span>
+          <span>Checking…</span>
+        </button>
+        <span class="save-state"><span class="save-dot"></span> Local draft</span>
+        <button class="icon-button" type="button" data-theme-toggle aria-label="Toggle theme">◐</button>
+        <button class="user-button" type="button" data-open-auth>RW</button>
+      </div>
+    </header>
+
+    <main id="workspace" class="workspace">
+      <aside class="file-sidebar" aria-label="Project files">
+        <div class="sidebar-heading">
+          <span>Project files</span>
+          <button class="small-icon" type="button" data-upload-trigger aria-label="Upload files">+</button>
+          <input class="sr-only" type="file" id="file-upload" multiple accept=".ino,.cpp,.h,.py,.json,.csv,.pdf,.md,.txt" />
+        </div>
+        <div class="project-meta">
+          <span class="folder-glyph">⌄</span>
+          <strong>spectroscopy-adapter</strong>
+          <span class="file-count" data-file-count>Loading...</span>
+        </div>
+        <nav class="file-tree" data-file-tree aria-label="Files"></nav>
+        <div class="sidebar-foot">
+          <div class="hardware-badge"><span class="status-dot"></span><div><strong data-board-name>ATmega2560 profile</strong><span data-board-desc>Generic 16-bit I/O board · 9600 baud</span></div></div>
+          <button class="outline-button" type="button" data-open-command>⌘ Search workspace</button>
+        </div>
+      </aside>
+
+      <section class="editor-area" aria-label="Code editor">
+        <div class="editor-tabs" data-editor-tabs>
+          <span class="editor-path">firmware / source</span>
+          <button class="run-button" type="button" data-run-draft><span>▶</span> Simulate draft</button>
+        </div>
+        <div class="editor-toolbar">
+          <span data-editor-state>Original source</span>
+          <span class="toolbar-separator"></span>
+          <span data-language-tag>Arduino C++</span>
+          <span class="toolbar-spacer"></span>
+          <button type="button" data-format-draft>Format</button>
+          <button type="button" data-save-draft>Save draft</button>
+        </div>
+        <div class="editor-shell">
+          <div class="editor-gutter" aria-hidden="true" data-editor-gutter></div>
+          <textarea class="editor" aria-label="Firmware editor. Editable draft." spellcheck="false" data-editor></textarea>
+        </div>
+        <div class="editor-status"><span data-cursor-pos>Ln 1, Col 1</span><span>UTF-8</span><span>Spaces: 2</span><span class="status-ready" data-syntax-status>Ready</span></div>
+        <div class="bottom-panel">
+          <div class="panel-tabs">
+            <button class="panel-tab is-active" type="button" data-tab-target="artifacts">Artifacts <span data-artifact-count>2</span></button>
+            <button class="panel-tab" type="button" data-tab-target="activity">Agent activity</button>
+            <button class="panel-tab" type="button" data-tab-target="simulation">Simulation output <span class="badge-mini" data-sim-badge style="display:none">0 steps</span></button>
+          </div>
+          <div class="panel-view" data-panel-view="artifacts">
+            <div class="artifact-list" data-artifact-list>
+              <button class="artifact-row" data-artifact="draft-firmware.ino"><span class="file-icon ino">INO</span><span><strong>draft-firmware.ino</strong><small>Reviewable firmware draft</small></span><span class="artifact-status">review</span></button>
+              <button class="artifact-row" data-artifact="wiring-notes.md"><span class="file-icon md">MD</span><span><strong>wiring-notes.md</strong><small>Generated integration notes</small></span><span class="artifact-status">ready</span></button>
+            </div>
+          </div>
+          <div class="panel-view" data-panel-view="activity" style="display: none;">
+            <div class="activity-log" data-activity-log>
+              <div class="activity-entry">
+                <span class="activity-time">0.0s</span>
+                <span class="activity-tag">INIT</span>
+                <span>Connecting to ForgeLab backend server…</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-view" data-panel-view="simulation" style="display: none;">
+            <div class="simulation-panel" data-simulation-panel>
+              <div class="sim-placeholder">
+                <p>No active simulation. Click <strong>▶ Simulate draft</strong> to compile and validate the sequence with the hardware engine.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="agent-sidebar" aria-label="ForgeLab agent">
+        <div class="agent-heading">
+          <div class="agent-avatar">✦</div>
+          <div><strong>ForgeLab agent</strong><span>Hardware-aware planning</span></div>
+          <span class="agent-live" data-backend-mode>LOCAL</span>
+        </div>
+        <div class="provider-bar">
+          <label for="provider-select">Provider:</label>
+          <select id="provider-select" data-provider-select aria-label="AI Provider selection">
+            <option value="local">ForgeLab Local Engine (Hardware-aware)</option>
+            <option value="ollama">Local Ollama (llama3.2)</option>
+            <option value="groq">Groq Cloud (Hosted LLM)</option>
+            <option value="gemini">Google Gemini (Free tier)</option>
+          </select>
+        </div>
+        <div class="context-strip"><span>Context loaded</span><strong data-context-count>8 files</strong><span>•</span><span data-context-board>16-bit I/O</span></div>
+        <div class="agent-thread" data-agent-thread>
+          <div class="agent-message">
+            <span class="message-meta">ForgeLab <time>now</time></span>
+            <p>I have the existing firmware and board profile in context. Ask me to inspect a file, adapt the I/O behavior, or generate a reviewable artifact.</p>
+          </div>
+          <div class="agent-task">
+            <div class="task-top"><span class="task-check">✓</span><strong>Backend connected</strong><span class="task-time" data-uptime>0s</span></div>
+            <div class="task-detail" data-task-detail>firmware.ino · hal_mcu.h · instrument_config.json · calibration.csv</div>
+          </div>
+        </div>
+        <div class="quick-prompts">
+          <span>Try asking</span>
+          <button type="button" data-prompt="Explain how the 16-bit output map works.">Explain the output map</button>
+          <button type="button" data-prompt="Draft a safe PWM control sequence for channel 9.">Draft a PWM sequence</button>
+          <button type="button" data-prompt="Generate a wiring-notes.md artifact from the current firmware.">Generate wiring notes</button>
+        </div>
+        <form class="agent-composer" data-agent-form>
+          <textarea rows="3" data-agent-input placeholder="Ask ForgeLab to inspect, adapt, or generate..." required></textarea>
+          <div class="composer-tools"><button type="button" class="composer-tool" data-upload-trigger>Attach files</button><span>Drafts never overwrite source</span><button class="send-button" type="submit" aria-label="Send prompt">↗</button></div>
+        </form>
+      </aside>
+    </main>
+
+    <div class="toast" data-toast role="status" aria-live="polite"></div>
+
+    <dialog class="auth-dialog" aria-labelledby="auth-title">
+      <div class="dialog-head"><div><p class="eyebrow">ForgeLab access</p><h2 id="auth-title">Welcome back.</h2></div><button class="dialog-close" type="button" data-close-auth>×</button></div>
+      <p class="auth-copy">Sign in to keep your hardware workspaces and reviewable drafts together.</p>
+      <a class="primary-button auth-google-button" href="/auth/google">Continue with Google</a>
+      <div class="auth-divider"><span>or use email</span></div>
+      <form class="auth-form" data-auth-form>
+        <label for="auth-identity">Email address</label>
+        <input id="auth-identity" type="email" placeholder="you@lab.org" required />
+        <button class="primary-button" type="submit">Send one-time code</button>
+        <div class="auth-code-step" data-auth-code-step hidden>
+          <label for="auth-code">Verification code</label>
+          <input id="auth-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" />
+          <button class="primary-button" type="button" data-verify-auth>Verify and sign in</button>
+        </div>
+        <p class="field-hint" data-auth-status>Use Google or receive a one-time code by email.</p>
+      </form>
+    </dialog>
+  </body>
+</html>

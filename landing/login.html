@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in | ForgeLab</title>
+    <link rel="stylesheet" href="styles.css?v=6" />
+  </head>
+  <body>
+    <main class="auth-page">
+      <section class="auth-dialog" style="margin: 12vh auto;">
+        <p class="eyebrow">ForgeLab access</p>
+        <h1 id="auth-title">Welcome back.</h1>
+        <p class="auth-copy">Sign in to open your AI-assisted hardware workspace.</p>
+        <a class="primary-button auth-google-button" data-google href="/auth/google">Continue with Google</a>
+        <div class="auth-divider"><span>or use email</span></div>
+        <form class="auth-form" data-login-form>
+          <label for="login-email">Email address</label>
+          <input id="login-email" type="email" placeholder="you@lab.org" required />
+          <button class="primary-button" type="submit">Send one-time code</button>
+          <div class="auth-code-step" data-code-step hidden>
+            <label for="login-code">Verification code</label>
+            <input id="login-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required />
+            <button class="primary-button" type="button" data-verify>Verify and sign in</button>
+          </div>
+          <p class="field-hint" data-status>Use Google or receive a one-time code by email.</p>
+        </form>
+        <p><a href="index.html">← Back to ForgeLab</a></p>
+      </section>
+    </main>
+    <script>
+      const api = window.location.protocol === "file:" ? "http://127.0.0.1:8765" : "";
+      document.querySelector("[data-google]").href = api + "/auth/google";
+      const form = document.querySelector("[data-login-form]");
+      const codeStep = document.querySelector("[data-code-step]");
+      const status = document.querySelector("[data-status]");
+      let email = "";
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        email = document.querySelector("#login-email").value.trim().toLowerCase();
+        status.textContent = "Sending your verification code…";
+        const response = await fetch(api + "/api/auth/send-otp", {
+          method: "POST", credentials: "include",
+          headers: {"Content-Type": "application/json"}, body: JSON.stringify({email})
+        });
+        const result = await response.json();
+        status.textContent = result.message || result.error;
+        if (response.ok) codeStep.hidden = false;
+      });
+      document.querySelector("[data-verify]").addEventListener("click", async () => {
+        const code = document.querySelector("#login-code").value.trim();
+        const response = await fetch(api + "/api/auth/verify-otp", {
+          method: "POST", credentials: "include",
+          headers: {"Content-Type": "application/json"}, body: JSON.stringify({email, code})
+        });
+        const result = await response.json();
+        status.textContent = result.message || result.error;
+        if (response.ok) window.location.href = api + "/workspace.html";
+      });
+    </script>
+  </body>
+</html>
