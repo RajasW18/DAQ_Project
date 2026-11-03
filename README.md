@@ -1,9 +1,82 @@
-# SpectraSoft System Updates
+# ForgeLab / SpectraSoft
+
+ForgeLab is an AI-assisted engineering workspace for inspecting spectroscopy
+firmware context, simulating safe control sequences, and generating reviewable
+draft artifacts. The repository also contains the standalone SpectraSoft
+industrial-control desktop application.
+
+## Architecture
+
+The web deployment is intentionally a single service: one Python process serves
+the public pages, authentication endpoints, workspace API, and AI-provider
+proxy. Provider credentials stay on the server and are never embedded in the
+browser bundle.
+
+```mermaid
+flowchart LR
+    Browser["Browser"] -->|HTTPS| Web["ForgeLab server<br/>forgelab_server.py"]
+    Web --> Static["landing/<br/>HTML, CSS, JS"]
+    Web --> Auth["Auth endpoints"]
+    Web --> Workspace["Workspace API"]
+    Web --> Drafts[".drafts/<br/>reviewable artifacts"]
+    Web --> Providers["AI provider adapter"]
+    Auth --> Google["Google OAuth"]
+    Auth --> SMTP["SMTP OTP"]
+    Providers --> Local["Local hardware engine"]
+    Providers --> Ollama["Ollama"]
+    Providers --> Groq["Groq"]
+    Providers --> Gemini["Gemini"]
+    Workspace --> Context["Read-only repository context"]
+```
+
+### Request and authentication flow
+
+```mermaid
+sequenceDiagram
+    participant U as User browser
+    participant F as ForgeLab server
+    participant G as Google
+    participant M as SMTP
+
+    U->>F: GET /login
+    U->>F: GET /auth/google
+    F->>G: Authorization request with state
+    G-->>F: GET /auth/google/callback?code=...&state=...
+    F->>G: Exchange code and fetch verified profile
+    F-->>U: HttpOnly session cookie + redirect to /workspace.html
+
+    U->>F: POST /api/auth/send-otp
+    F->>M: Send six-digit verification code
+    M-->>U: Verification email
+    U->>F: POST /api/auth/verify-otp
+    F-->>U: HttpOnly session cookie
+```
+
+Unauthenticated requests to `/workspace.html` are redirected to `/login`.
+OAuth state is single-use and expires after ten minutes. Sessions expire after
+seven days.
+
+### AI-provider routing
+
+```mermaid
+flowchart TD
+    Prompt["User prompt"] --> Chat["POST /api/chat"]
+    Chat --> Select{"Provider selected"}
+    Select --> Local["ForgeLab Local Engine<br/>No API key"]
+    Select --> Ollama["Ollama<br/>Local URL + model"]
+    Select --> Groq["Groq<br/>GROQ_API_KEY"]
+    Select --> Gemini["Gemini<br/>GEMINI_API_KEY"]
+    Local --> Response["DSL / explanation / artifact"]
+    Ollama --> Response
+    Groq --> Response
+    Gemini --> Response
+    Response --> Browser["Review in browser"]
+```
 
 ## Deploy ForgeLab
 
-ForgeLab is now deployable as one container: the Python server serves both the
-landing pages and API, and listens on `0.0.0.0:$PORT`.
+ForgeLab is deployable as one Docker container. The Python server listens on
+`0.0.0.0:$PORT`; Render supplies `PORT=8000` through [render.yaml](render.yaml).
 
 ### Local production-like run
 
@@ -19,13 +92,42 @@ landing pages and API, and listens on `0.0.0.0:$PORT`.
 
 4. Open `http://localhost:8765/login`.
 
+The landing page is available at `http://localhost:8765/`; the protected
+workspace is at `http://localhost:8765/workspace.html`.
+
 ### Free deployment
 
-Render can deploy the included `render.yaml` and `Dockerfile` on its free web
-service. Set `FRONTEND_URL` to the public Render URL and
-`GOOGLE_REDIRECT_URI` to `<public-url>/auth/google/callback`, then add the
-same callback URL in Google Cloud Console. Add all secrets in Render's
-environment settings; never commit `.env`.
+Render can deploy the included [render.yaml](render.yaml) and [Dockerfile](Dockerfile)
+on its free web service:
+
+1. Push the repository to GitHub, including `render.yaml` and `Dockerfile`.
+2. In Render, choose **New → Blueprint**, select the repository, and apply the
+   blueprint.
+3. Set `FRONTEND_URL` to the public Render URL, for example
+   `https://daq-project.onrender.com`.
+4. Set `GOOGLE_REDIRECT_URI` to
+   `https://daq-project.onrender.com/auth/google/callback`.
+5. Add that exact callback URL to the Google OAuth client.
+6. Enter secrets in Render's environment settings and redeploy.
+
+Open the deployed login page at:
+
+```text
+https://daq-project.onrender.com/login
+```
+
+Never commit `.env`, API keys, OAuth secrets, SMTP passwords, or session
+secrets. If a secret is exposed, revoke it and create a replacement.
+
+### Deployment environment
+
+| Variable | Local example | Render value |
+| --- | --- | --- |
+| `PORT` | `8765` by default | `8000` |
+| `FRONTEND_URL` | `http://localhost:8765` | `https://<service>.onrender.com` |
+| `GOOGLE_REDIRECT_URI` | `http://localhost:8765/auth/google/callback` | `https://<service>.onrender.com/auth/google/callback` |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | Gmail account / App Password | Render secret variables |
+| `GROQ_API_KEY` / `GEMINI_API_KEY` | Optional | Render secret variables |
 
 ### AI providers
 
