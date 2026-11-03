@@ -333,13 +333,22 @@ class GeminiProvider:
             headers={"Content-Type": "application/json"},
             method="POST"
         )
-        try:
-            with urllib.request.urlopen(req, timeout=30) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-            content = payload["candidates"][0]["content"]["parts"][0]["text"]
-            return _make_artifact(content, extension)
-        except Exception as exc:
-            raise ProviderError(f"Gemini artifact error: {exc}") from exc
+        last_error = None
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=90) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                content = payload["candidates"][0]["content"]["parts"][0]["text"]
+                return _make_artifact(content, extension)
+            except urllib.error.HTTPError as exc:
+                err_body = exc.read().decode("utf-8", errors="replace")
+                raise ProviderError(f"Gemini artifact error ({exc.code}): {err_body}") from exc
+            except (urllib.error.URLError, TimeoutError, KeyError, IndexError,
+                    json.JSONDecodeError, ValueError) as exc:
+                last_error = exc
+                if attempt == 0:
+                    continue
+        raise ProviderError(f"Gemini artifact error after retry: {last_error}")
 
 
 def _make_artifact(content, extension):
