@@ -17,8 +17,9 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("SpectraSoft")
         
-        # Fixed size — window cannot be resized
-        self.setFixedSize(1100, 680)
+        # Keep a useful minimum while allowing users to resize or maximize.
+        self.setMinimumSize(960, 680)
+        self.resize(1200, 820)
 
         self._current_action = None
 
@@ -110,6 +111,12 @@ class MainWindow(QMainWindow):
         self.action_simulation.setCheckable(True)
         self.action_simulation.triggered.connect(self._open_simulation)
         analysis_m.addAction(self.action_simulation)
+
+        builder_m = mb.addMenu("Industrial Control")
+        self.action_builder = QAction("AI Control Builder", self)
+        self.action_builder.setCheckable(True)
+        self.action_builder.triggered.connect(self._open_industrial_builder)
+        builder_m.addAction(self.action_builder)
 
         # Default: Analytical Group checked
         self.action_group.setChecked(True)
@@ -259,6 +266,11 @@ class MainWindow(QMainWindow):
         
         run_page = AnalysisRunPage(self, group_id=gid, group_name=gname)
         self.set_right_widget(run_page)
+
+    def _open_industrial_builder(self):
+        self._set_active_menu(self.action_builder)
+        from ui.industrial_builder_page import IndustrialBuilderPage
+        self.set_right_widget(IndustrialBuilderPage(self))
 
     def _build_status_bar(self):
         sb = QStatusBar()

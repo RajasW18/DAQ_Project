@@ -19,6 +19,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 ROOT = Path(__file__).resolve().parent
 LANDING = ROOT / "landing"
@@ -80,8 +81,10 @@ def initialize_web_database():
     try:
         from web_database import init_web_db
         init_web_db()
+        return True
     except Exception as exc:
         sys.stderr.write(f"[ForgeLab DB] Web database unavailable: {exc}\n")
+        return False
 
 
 def record_chat(user: dict, role: str, content: str, provider: str = "local") -> None:
@@ -345,8 +348,14 @@ def google_token_user(code: str, config: dict) -> dict:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
     )
-    with urlopen(token_request, timeout=10) as response:
-        token_data = json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(token_request, timeout=10) as response:
+            token_data = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise ValueError(f"Google token exchange failed ({exc.code}): {detail}") from exc
+    except URLError as exc:
+        raise ValueError(f"Google token endpoint is unreachable: {exc.reason}") from exc
     access_token = token_data.get("access_token")
     if not access_token:
         raise ValueError("Google did not return an access token.")
@@ -354,8 +363,14 @@ def google_token_user(code: str, config: dict) -> dict:
         "https://openidconnect.googleapis.com/v1/userinfo",
         headers={"Authorization": f"Bearer {access_token}"},
     )
-    with urlopen(user_request, timeout=10) as response:
-        user_data = json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(user_request, timeout=10) as response:
+            user_data = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise ValueError(f"Google profile request failed ({exc.code}): {detail}") from exc
+    except URLError as exc:
+        raise ValueError(f"Google profile endpoint is unreachable: {exc.reason}") from exc
     if not user_data.get("email") or not user_data.get("email_verified"):
         raise ValueError("Google account email is missing or not verified.")
     return {
@@ -502,6 +517,21 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         gemini_active = bool(gemini_key)
         ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
         
+        database_status = "unconfigured"
+        database_session = None
+        try:
+            from web_database import get_web_session
+            from sqlalchemy import text
+            database_session = get_web_session()
+            database_session.execute(text("SELECT 1"))
+            database_status = "ready"
+        except Exception as exc:
+            database_status = "unavailable"
+            sys.stderr.write(f"[ForgeLab DB] Health check failed: {exc}\n")
+        finally:
+            if database_session is not None:
+                database_session.close()
+
         self.send_json(200, {
             "status": "online",
             "server": "ForgeLabLocal/1.0",
@@ -531,7 +561,8 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
                     and os.getenv("SMTP_PASSWORD")
                 ),
                 "google_oauth": bool(google_configuration()["client_id"])
-            }
+            },
+            "database": {"status": database_status}
         })
 
     def handle_profile_get(self):
@@ -835,7 +866,7 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             self.end_headers()
         except Exception as exc:
             sys.stderr.write(f"[ForgeLab Auth] Google OAuth failed: {exc}\n")
-            self.send_error(502, "Google sign-in could not be completed.")
+            self.send_error(502, f"Google sign-in could not be completed: {exc}")
 
     def handle_auth_logout(self):
         self.send_response(204)
