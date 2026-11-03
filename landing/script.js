@@ -423,10 +423,12 @@ def write_outputs(value: int):
     // Look for lines containing CONFIG, W, PIN, DLY
     const lines = content.split("\n");
     const dslLines = lines.filter((l) => /^(CONFIG|PIN|W|WRITE|DLY|DELAY|PIPE)\b/i.test(l.trim()));
-    if (dslLines.length) {
+    const hasExecutableStep = dslLines.some((l) => /^(PIN|W|WRITE|DLY|DELAY|PIPE)\b/i.test(l.trim()));
+    if (dslLines.length && hasExecutableStep) {
       dslCandidate = dslLines.join(";\n");
     } else {
-      // Default safe sequence for ATmega2560
+      // Configuration-only source files do not contain executable sequence steps.
+      // Use a safe deterministic smoke sequence until the user supplies one.
       dslCandidate = "CONFIG 9 PWM;\nW 9 160;\nDLY 150;\nW 9 0;";
     }
 
