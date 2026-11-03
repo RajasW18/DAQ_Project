@@ -169,6 +169,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .artifact-row:hover { background: var(--panel-subtle); transform: translateX(3px); }
 .artifact-row span:nth-child(2) { display: grid; }
 .artifact-row small { color: var(--muted); font-size: 10px; }
+.artifact-actions { display: flex; gap: 4px; margin-left: auto; }
+.artifact-actions button { padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); font-size: 10px; }
+.artifact-actions button:hover { border-color: var(--focus); color: var(--text); }
 
 .agent-sidebar { display: flex; flex-direction: column; border-left: 1px solid var(--line); min-height: 0; overflow: hidden; height: 100%; }
 .agent-heading { gap: 10px; padding: 15px 17px; border-bottom: 1px solid var(--line); flex-shrink: 0; }

@@ -227,6 +227,25 @@ def write_outputs(value: int):
   }
 
   async function loadFile(name) {
+    if (activeProjectId) {
+      try {
+        const projectResponse = await fetch(`${API_BASE}/api/project-files?project_id=${encodeURIComponent(activeProjectId)}`, { credentials: "include" });
+        if (projectResponse.ok) {
+          const projectData = await projectResponse.json();
+          const projectFile = projectData.files.find((file) => file.path === name);
+          if (projectFile) {
+            files[name] = projectFile.content;
+            activeFile = name;
+            if (!openFiles.includes(name)) openFiles.push(name);
+            renderEditor();
+            return;
+          }
+        }
+      } catch {
+        // Fall through to the source workspace.
+      }
+    }
+
     // 1. Check local draft
     const savedDraft = localStorage.getItem(`forgelab-draft:${name}`);
     if (savedDraft !== null) {
@@ -365,15 +384,16 @@ def write_outputs(value: int):
     if (stateEl) stateEl.textContent = "Saved draft";
 
     try {
-      const res = await fetch(`${API_BASE}/api/save-draft`, {
+      const res = await fetch(`${API_BASE}/api/project-files`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: activeFile, content: files[activeFile] })
+        credentials: "include",
+        body: JSON.stringify({ project_id: activeProjectId, path: activeFile, content: files[activeFile] })
       });
       if (res.ok) {
         const data = await res.json();
-        logActivity("SAVE", `Persisted draft '${data.name}' to backend`);
-        showToast(`Draft saved locally & persisted to backend .drafts/`);
+        logActivity("SAVE", `Persisted '${data.file.path}' as project version ${data.file.version}`);
+        showToast(`${activeFile} saved to project version ${data.file.version}.`);
         return;
       }
     } catch {
@@ -532,8 +552,10 @@ def write_outputs(value: int):
     list.replaceChildren();
 
     artifacts.forEach((art) => {
-      const row = document.createElement("button");
+      const row = document.createElement("div");
       row.className = "artifact-row";
+      row.setAttribute("role", "button");
+      row.tabIndex = 0;
       row.dataset.artifact = art.name;
       row.innerHTML = `
         <span class="file-icon ${art.type}">${art.type.toUpperCase()}</span>
@@ -547,10 +569,40 @@ def write_outputs(value: int):
         renderEditor();
         showToast(`Loaded reviewable artifact: ${art.name}`);
       });
+      if (art.revisionId && art.status === "pending approval") {
+        const actions = document.createElement("span");
+        actions.className = "artifact-actions";
+        actions.innerHTML = `<button type="button" class="artifact-approve">Approve</button><button type="button" class="artifact-reject">Reject</button>`;
+        actions.querySelector(".artifact-approve").addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await reviewArtifact(art, "approve");
+        });
+        actions.querySelector(".artifact-reject").addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await reviewArtifact(art, "reject");
+        });
+        row.append(actions);
+      }
       list.append(row);
     });
 
     if (countEl) countEl.textContent = String(artifacts.length);
+  }
+
+  async function reviewArtifact(artifact, action) {
+    try {
+      const response = await fetch(`${API_BASE}/api/project-revisions/${artifact.revisionId}/${action}`, {
+        method: "POST",
+        credentials: "include"
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `Could not ${action} revision.`);
+      artifact.status = action === "approve" ? "approved" : "rejected";
+      renderArtifacts();
+      showToast(`${artifact.name} ${artifact.status}.`);
+    } catch (error) {
+      showToast(error.message);
+    }
   }
 
   /* ── Agent Chat Form (/api/chat) ── */
@@ -623,7 +675,7 @@ def write_outputs(value: int):
         isStreaming = true;
 
         // Progressive stream words into body
-        streamResponse(bodyEl, replyText, () => {
+        streamResponse(bodyEl, replyText, async () => {
           isStreaming = false;
 
           // If DSL provided, add fluid simulate button
@@ -641,20 +693,39 @@ def write_outputs(value: int):
             reply.append(dslAction);
           }
 
-          // If artifact generated, register it
+          // If artifact generated, register it as a pending revision.
           if (data.artifact) {
             const art = data.artifact;
             files[art.filename] = art.content || "// Draft artifact";
-            const exists = artifacts.find((a) => a.name === art.filename);
-            if (!exists) {
-              artifacts.push({
+            let artifactEntry = artifacts.find((a) => a.name === art.filename);
+            if (!artifactEntry) {
+              artifactEntry = {
                 name: art.filename,
                 type: art.filename.split(".").pop().toLowerCase(),
                 summary: art.summary || "Generated by ForgeLab",
                 status: "review",
                 content: art.content
-              });
+              };
+              artifacts.push(artifactEntry);
               renderArtifacts();
+            }
+            if (activeProjectId) {
+              try {
+                const revisionResponse = await fetch(`${API_BASE}/api/project-revisions`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ project_id: activeProjectId, path: art.filename, content: art.content || "" })
+                });
+                const revision = await revisionResponse.json();
+                if (!revisionResponse.ok) throw new Error(revision.error || "Could not create revision.");
+                artifactEntry.revisionId = revision.id;
+                artifactEntry.status = "pending approval";
+                renderArtifacts();
+                showToast(`${art.filename} is awaiting your approval.`);
+              } catch (error) {
+                showToast(error.message);
+              }
             }
             showToast(`Generated draft artifact: ${art.filename}`);
           }

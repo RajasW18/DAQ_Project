@@ -76,6 +76,19 @@ class ProjectFile(WebBase):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class ProjectRevision(WebBase):
+    __tablename__ = "web_project_revisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("web_projects.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("web_users.id"), index=True)
+    path: Mapped[str] = mapped_column(String(500))
+    content: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ChatMessage(WebBase):
     __tablename__ = "web_chat_messages"
 

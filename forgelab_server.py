@@ -15,6 +15,7 @@ import os
 import secrets
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -453,6 +454,14 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
             self.handle_projects_get()
             return
 
+        if path == "/api/project-files":
+            self.handle_project_files_get(parse_qs(parsed.query))
+            return
+
+        if path == "/api/project-revisions":
+            self.handle_project_revisions_get(parse_qs(parsed.query))
+            return
+
         if path == "/api/chat/history":
             self.handle_chat_history(parse_qs(urlparse(self.path).query))
             return
@@ -494,6 +503,22 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
 
         if path == "/api/save-draft":
             self.handle_save_draft(raw)
+            return
+
+        if path == "/api/project-files":
+            self.handle_project_file_save(raw)
+            return
+
+        if path == "/api/project-revisions":
+            self.handle_revision_create(raw)
+            return
+
+        if path.startswith("/api/project-revisions/") and path.endswith("/approve"):
+            self.handle_revision_review(path, "approved")
+            return
+
+        if path.startswith("/api/project-revisions/") and path.endswith("/reject"):
+            self.handle_revision_review(path, "rejected")
             return
 
         if path == "/api/auth/send-otp":
@@ -661,6 +686,157 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
         finally:
             session.close()
 
+    def _owned_project(self, session, user_id: int, project_id):
+        from web_database import Project
+        try:
+            project = session.get(Project, int(project_id))
+        except (TypeError, ValueError):
+            return None
+        return project if project and project.owner_id == user_id else None
+
+    def handle_project_files_get(self, query: dict):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        from web_database import ProjectFile, get_web_session
+        session = get_web_session()
+        try:
+            project = self._owned_project(session, user["id"], query.get("project_id", [None])[0])
+            if not project:
+                self.send_json(404, {"error": "Project not found."})
+                return
+            files = session.query(ProjectFile).filter_by(project_id=project.id).order_by(ProjectFile.path).all()
+            self.send_json(200, {"files": [
+                {"id": file.id, "path": file.path, "content": file.content,
+                 "version": file.version, "updated_at": file.updated_at.isoformat()}
+                for file in files
+            ]})
+        finally:
+            session.close()
+
+    def handle_project_file_save(self, raw: bytes):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            project_id = data.get("project_id")
+            path = Path(str(data.get("path", ""))).name
+            content = str(data.get("content", ""))
+            if not path or path in {".", ".."} or len(content) > 500000:
+                self.send_json(400, {"error": "A valid file path and content under 500 KB are required."})
+                return
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": f"Invalid project file request: {exc}"})
+            return
+        from web_database import AuditEvent, ProjectFile, get_web_session
+        session = get_web_session()
+        try:
+            project = self._owned_project(session, user["id"], project_id)
+            if not project:
+                self.send_json(404, {"error": "Project not found."})
+                return
+            file = session.query(ProjectFile).filter_by(project_id=project.id, path=path).one_or_none()
+            if file is None:
+                file = ProjectFile(project_id=project.id, path=path, content=content, version=1)
+                session.add(file)
+            else:
+                file.content = content
+                file.version += 1
+            session.add(AuditEvent(user_id=user["id"], project_id=project.id, event_type="file_saved", details=path))
+            session.commit()
+            self.send_json(200, {"success": True, "file": {"id": file.id, "path": file.path, "version": file.version}})
+        finally:
+            session.close()
+
+    def handle_project_revisions_get(self, query: dict):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        from web_database import ProjectRevision, get_web_session
+        session = get_web_session()
+        try:
+            project = self._owned_project(session, user["id"], query.get("project_id", [None])[0])
+            if not project:
+                self.send_json(404, {"error": "Project not found."})
+                return
+            revisions = session.query(ProjectRevision).filter_by(project_id=project.id).order_by(ProjectRevision.created_at.desc()).limit(100).all()
+            self.send_json(200, {"revisions": [
+                {"id": revision.id, "path": revision.path, "content": revision.content,
+                 "status": revision.status, "created_at": revision.created_at.isoformat()}
+                for revision in revisions
+            ]})
+        finally:
+            session.close()
+
+    def handle_revision_create(self, raw: bytes):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            path = Path(str(data.get("path", ""))).name
+            content = str(data.get("content", ""))
+            if not path or len(content) > 500000:
+                self.send_json(400, {"error": "A valid file path and content under 500 KB are required."})
+                return
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": f"Invalid revision request: {exc}"})
+            return
+        from web_database import ProjectRevision, get_web_session
+        session = get_web_session()
+        try:
+            project = self._owned_project(session, user["id"], data.get("project_id"))
+            if not project:
+                self.send_json(404, {"error": "Project not found."})
+                return
+            revision = ProjectRevision(project_id=project.id, user_id=user["id"], path=path, content=content)
+            session.add(revision)
+            session.commit()
+            self.send_json(201, {"id": revision.id, "path": revision.path, "status": revision.status})
+        finally:
+            session.close()
+
+    def handle_revision_review(self, path: str, status: str):
+        user = session_user(self)
+        if not user:
+            self.send_json(401, {"error": "Authentication required."})
+            return
+        try:
+            revision_id = int(path.split("/")[3])
+        except (IndexError, ValueError):
+            self.send_json(400, {"error": "Invalid revision ID."})
+            return
+        from web_database import AuditEvent, ProjectFile, ProjectRevision, get_web_session
+        session = get_web_session()
+        try:
+            revision = session.get(ProjectRevision, revision_id)
+            if not revision or revision.user_id != user["id"]:
+                self.send_json(404, {"error": "Revision not found."})
+                return
+            if revision.status != "pending":
+                self.send_json(409, {"error": f"Revision is already {revision.status}."})
+                return
+            revision.status = status
+            revision.reviewed_at = datetime.utcnow()
+            if status == "approved":
+                file = session.query(ProjectFile).filter_by(project_id=revision.project_id, path=revision.path).one_or_none()
+                if file is None:
+                    file = ProjectFile(project_id=revision.project_id, path=revision.path, content=revision.content, version=1)
+                    session.add(file)
+                else:
+                    file.content = revision.content
+                    file.version += 1
+            session.add(AuditEvent(user_id=user["id"], project_id=revision.project_id, event_type=f"revision_{status}", details=revision.path))
+            session.commit()
+            self.send_json(200, {"success": True, "status": status})
+        finally:
+            session.close()
+
     def handle_chat_history(self, query: dict):
         user = session_user(self)
         if not user:
@@ -773,8 +949,8 @@ class ForgeLabHandler(BaseHTTPRequestHandler):
                 'Return JSON with keys "dsl" and "explanation". If the user asks for code or an artifact, '
                 "put the complete proposed draft in explanation and summarize the file name."
             )
-            user = f"User request:\n{prompt}\n\nAuthoritative workspace context:\n{read_context()}"
-            result = provider.create_plan(system, user, conversation if isinstance(conversation, list) else [])
+            user_prompt = f"User request:\n{prompt}\n\nAuthoritative workspace context:\n{read_context()}"
+            result = provider.create_plan(system, user_prompt, conversation if isinstance(conversation, list) else [])
             response = {
                 "message": result.get("explanation", ""),
                 "dsl": result.get("dsl", ""),
