@@ -50,8 +50,14 @@ class GroqProvider:
         if not self.api_key:
             raise ProviderError("GROQ_API_KEY is not set. Add it to the environment or select Ollama.")
         messages = [{"role": "system", "content": system}]
-        messages.extend(conversation[-8:])
-        messages.append({"role": "user", "content": user})
+        recent_messages = conversation[-4:] if isinstance(conversation, list) else []
+        for item in recent_messages:
+            if isinstance(item, dict):
+                messages.append({
+                    "role": str(item.get("role", "user")),
+                    "content": str(item.get("content", ""))[:2000],
+                })
+        messages.append({"role": "user", "content": user[:14000]})
         body = {"model": self.model, "temperature": 0.1,
                 "response_format": {"type": "json_object"},
                 "messages": messages}
@@ -81,7 +87,7 @@ class GroqProvider:
         )
         user = (
             f"Artifact type: {artifact_type}\nRequired extension: {extension}\n"
-            f"User request: {prompt.strip()}\n\nReference context:\n{context[:16000]}"
+            f"User request: {prompt.strip()}\n\nReference context:\n{context[:8000]}"
         )
         body = {"model": self.model, "temperature": 0.2,
                 "messages": [{"role": "system", "content": system},

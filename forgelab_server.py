@@ -116,7 +116,7 @@ def record_chat(user: dict, role: str, content: str, provider: str = "local", pr
 def read_context() -> str:
     sections = []
     total_chars = 0
-    max_total_chars = 32000
+    max_total_chars = 12000
     for name, path in SOURCE_FILES.items():
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
