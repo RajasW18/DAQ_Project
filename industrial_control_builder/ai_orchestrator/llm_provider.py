@@ -108,6 +108,18 @@ class GroqProvider:
                 }
                 return self._request(self._groq_request(compact_body))
 
+    def _groq_request(self, body):
+        return urllib.request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=json.dumps(body).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "SpectraSoft-IndustrialBuilder/1.0",
+            },
+            method="POST",
+        )
+
     def generate_artifact(self, artifact_type: str, extension: str, prompt: str,
                           context: str = "") -> Dict[str, str]:
         if not self.api_key:
