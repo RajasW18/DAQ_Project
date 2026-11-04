@@ -181,6 +181,22 @@ class GroqProvider:
                 json.JSONDecodeError, ValueError) as exc:
             raise ProviderError(f"Could not get a valid JSON response from the LLM: {exc}") from exc
 
+    @staticmethod
+    def _request_text(req):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            content = data["choices"][0]["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("The model returned an empty artifact.")
+            return content.strip()
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:500]
+            raise ProviderError(f"Artifact request failed ({exc.code}): {detail}") from exc
+        except (urllib.error.URLError, TimeoutError, KeyError, IndexError,
+                json.JSONDecodeError, ValueError) as exc:
+            raise ProviderError(f"Could not get artifact text from the LLM: {exc}") from exc
+
 
 def _parse_json_object(content):
     if not isinstance(content, str):
@@ -200,23 +216,6 @@ def _parse_json_object(content):
     if not isinstance(value, dict):
         raise ValueError("Expected a JSON object.")
     return value
-
-    @staticmethod
-    def _request_text(req):
-        try:
-            with urllib.request.urlopen(req, timeout=120) as response:
-                data = json.loads(response.read().decode("utf-8"))
-            content = data["choices"][0]["message"]["content"]
-            if not isinstance(content, str) or not content.strip():
-                raise ValueError("The model returned an empty artifact.")
-            return content.strip()
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")[:500]
-            raise ProviderError(f"Artifact request failed ({exc.code}): {detail}") from exc
-        except (urllib.error.URLError, TimeoutError, KeyError, IndexError,
-                json.JSONDecodeError, ValueError) as exc:
-            raise ProviderError(f"Could not get artifact text from the LLM: {exc}") from exc
-
 
 class OllamaProvider:
     def __init__(self):

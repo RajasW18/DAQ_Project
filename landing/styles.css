@@ -113,6 +113,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .editor-tab-main, .editor-tab-close { height: 100%; border: 0; background: transparent; color: var(--text); cursor: pointer; }
 .editor-tab-main { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; font-size: 12px; }
 .editor-tab-main .file-icon { width: 23px; }
+.tab-dirty { width: 6px; height: 6px; margin-left: 2px; border-radius: 50%; background: var(--focus); }
 .editor-tab-close { width: 28px; color: var(--muted); font-size: 17px; transition: all 0.15s; }
 .editor-tab-close:hover { color: var(--text); background: var(--panel-subtle); }
 .editor-path { align-self: center; flex: 0 0 auto; padding-left: 15px; color: var(--muted); font: 10px Consolas, monospace; }
@@ -137,6 +138,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .editor-shell { display: grid; grid-template-columns: 58px minmax(0, 1fr); min-height: 0; overflow: hidden; background: var(--code); }
 .editor-gutter { overflow: hidden; padding: 22px 14px 22px 0; border-right: 1px solid var(--line); color: var(--muted); text-align: right; user-select: none; white-space: pre; font: 12px/1.7 Consolas, "Courier New", monospace; }
 .editor { width: 100%; height: 100%; min-height: 0; resize: none; overflow: auto; padding: 22px 25px; border: 0; outline: 0; background: var(--code); color: var(--text); font: 12px/1.7 Consolas, "Courier New", monospace; white-space: pre; tab-size: 2; }
+.editor.is-wrapped { white-space: pre-wrap; overflow-wrap: break-word; }
 .editor::selection { background: var(--focus-soft); }
 .editor:focus-visible { outline: 0; }
 .code-line { display: block; min-height: 20px; }
@@ -145,6 +147,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .code-keyword, .code-string, .code-number { color: var(--text); }
 .editor-status { gap: 20px; padding: 0 15px; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font: 10px Consolas, monospace; }
 .status-ready { margin-left: auto; color: var(--focus); }
+.find-bar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--panel-subtle); }
+.find-bar input { width: 150px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--code); color: var(--text); font: 11px Consolas, monospace; }
+.find-bar button { padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); font: 10px Consolas, monospace; }
+.find-bar button:hover { border-color: var(--focus); color: var(--text); }
+.find-bar span { color: var(--muted); font: 10px Consolas, monospace; }
+.command-dialog { width: min(520px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); }
+.command-input { width: 100%; margin: 18px 0 8px; padding: 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--text); font: 12px Consolas, monospace; }
+.command-list { display: grid; max-height: 300px; overflow-y: auto; }
+.command-item { display: flex; justify-content: space-between; gap: 16px; padding: 10px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text); text-align: left; }
+.command-item:hover, .command-item:focus-visible { background: var(--panel-subtle); }
+.command-item small { color: var(--muted); font: 10px Consolas, monospace; }
 .bottom-panel { overflow: auto; border-top: 1px solid var(--line); background: var(--panel); }
 .panel-tabs { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border-bottom: 1px solid var(--line); }
 .panel-tabs button {

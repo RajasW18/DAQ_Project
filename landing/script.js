@@ -80,6 +80,7 @@ def write_outputs(value: int):
 
   let activeFile = "firmware.ino";
   let openFiles = ["firmware.ino"];
+  const dirtyFiles = new Set();
   const artifacts = [
     { name: "draft-firmware.ino", type: "ino", summary: "Reviewable firmware draft", status: "review" },
     { name: "wiring-notes.md", type: "md", summary: "Generated integration notes", status: "ready" }
@@ -311,7 +312,8 @@ def write_outputs(value: int):
     openFiles.forEach((name) => {
       const tab = document.createElement("div");
       tab.className = `editor-tab${name === activeFile ? " is-active" : ""}`;
-      tab.innerHTML = `<button type="button" class="editor-tab-main"><span class="file-icon ${iconClass(name)}">${name.split(".").pop().toUpperCase()}</span><span>${name}</span></button><button type="button" class="editor-tab-close" aria-label="Close ${name}">×</button>`;
+      const dirty = dirtyFiles.has(name);
+      tab.innerHTML = `<button type="button" class="editor-tab-main"><span class="file-icon ${iconClass(name)}">${name.split(".").pop().toUpperCase()}</span><span>${name}</span>${dirty ? '<span class="tab-dirty" aria-label="Unsaved changes"></span>' : ""}</button><button type="button" class="editor-tab-close" aria-label="Close ${name}">×</button>`;
 
       tab.querySelector(".editor-tab-main").addEventListener("click", () => {
         activeFile = name;
@@ -348,7 +350,9 @@ def write_outputs(value: int):
 
   editor?.addEventListener("input", () => {
     files[activeFile] = editor.value;
+    dirtyFiles.add(activeFile);
     localStorage.setItem(`forgelab-draft:${activeFile}`, files[activeFile]);
+    renderEditorTabs();
     updateEditorGutter();
     updateCursorPos();
     const stateEl = document.querySelector("[data-editor-state]");
@@ -373,7 +377,175 @@ def write_outputs(value: int):
       e.preventDefault();
       document.querySelector("[data-save-draft]")?.click();
     }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      openFindBar(false);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "h") {
+      e.preventDefault();
+      openFindBar(true);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+      e.preventDefault();
+      openCommandDialog();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+      e.preventDefault();
+      toggleComment();
+    }
+    if (e.key === "Escape") {
+      document.querySelector("[data-find-bar]")?.setAttribute("hidden", "");
+    }
   });
+
+  const pairMap = { "(": ")", "[": "]", "{": "}", "'": "'", '"': '"', "`": "`" };
+  editor?.addEventListener("keydown", (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const closing = pairMap[event.key];
+    if (!closing || editor.selectionStart !== editor.selectionEnd) return;
+    if (editor.value[editor.selectionStart] === closing) {
+      event.preventDefault();
+      editor.selectionStart = editor.selectionEnd = editor.selectionStart + 1;
+      return;
+    }
+    event.preventDefault();
+    const position = editor.selectionStart;
+    editor.setRangeText(event.key + closing, position, position, "end");
+    editor.selectionStart = editor.selectionEnd = position + 1;
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  editor?.addEventListener("keydown", (event) => {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "d") return;
+    event.preventDefault();
+    const lineStart = editor.value.lastIndexOf("\n", editor.selectionStart - 1) + 1;
+    const lineEnd = editor.value.indexOf("\n", editor.selectionEnd);
+    const end = lineEnd < 0 ? editor.value.length : lineEnd;
+    const line = editor.value.slice(lineStart, end);
+    editor.setRangeText(`${line}\n${line}`, lineStart, end, "select");
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  function toggleComment() {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
+    const selected = editor.value.slice(lineStart, end);
+    const lines = selected.split("\n");
+    const commentPrefix = activeFile.endsWith(".py") ? "# " : "// ";
+    const uncomment = lines.every((line) => !line.trim() || line.trimStart().startsWith(commentPrefix.trim()));
+    const updated = lines.map((line) => uncomment
+      ? line.replace(new RegExp(`^(\\s*)${commentPrefix.trim()}?`), "$1")
+      : (line.trim() ? commentPrefix + line : line)).join("\n");
+    editor.setRangeText(updated, lineStart, end, "select");
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function openFindBar(replace) {
+    const bar = document.querySelector("[data-find-bar]");
+    if (!bar) return;
+    bar.hidden = false;
+    if (replace) document.querySelector("[data-replace-input]")?.focus();
+    else document.querySelector("[data-find-input]")?.focus();
+    updateFindCount();
+  }
+
+  function updateFindCount() {
+    const query = document.querySelector("[data-find-input]")?.value;
+    const count = query ? editor.value.split(query).length - 1 : 0;
+    const output = document.querySelector("[data-find-count]");
+    if (output) output.textContent = `${count} match${count === 1 ? "" : "es"}`;
+  }
+
+  function findNext(direction = 1) {
+    const query = document.querySelector("[data-find-input]")?.value;
+    if (!query) return;
+    const start = direction > 0 ? editor.selectionEnd : editor.selectionStart - query.length;
+    const index = direction > 0
+      ? editor.value.indexOf(query, Math.max(0, start))
+      : editor.value.lastIndexOf(query, Math.max(0, start));
+    const match = index >= 0 ? index : direction > 0 ? editor.value.indexOf(query) : editor.value.lastIndexOf(query);
+    if (match >= 0) {
+      editor.focus();
+      editor.setSelectionRange(match, match + query.length);
+    }
+  }
+
+  function replaceCurrent() {
+    const query = document.querySelector("[data-find-input]")?.value;
+    const replacement = document.querySelector("[data-replace-input]")?.value || "";
+    if (query && editor.value.slice(editor.selectionStart, editor.selectionEnd) === query) {
+      editor.setRangeText(replacement, editor.selectionStart, editor.selectionEnd, "end");
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    findNext();
+  }
+
+  function replaceAll() {
+    const query = document.querySelector("[data-find-input]")?.value;
+    const replacement = document.querySelector("[data-replace-input]")?.value || "";
+    if (!query) return;
+    editor.value = editor.value.split(query).join(replacement);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    updateFindCount();
+  }
+
+  document.querySelector("[data-toggle-find]")?.addEventListener("click", () => openFindBar(false));
+  document.querySelector("[data-close-find]")?.addEventListener("click", () => {
+    document.querySelector("[data-find-bar]").hidden = true;
+    editor.focus();
+  });
+  document.querySelector("[data-find-input]")?.addEventListener("input", updateFindCount);
+  document.querySelector("[data-find-next]")?.addEventListener("click", () => findNext());
+  document.querySelector("[data-find-prev]")?.addEventListener("click", () => findNext(-1));
+  document.querySelector("[data-replace-one]")?.addEventListener("click", replaceCurrent);
+  document.querySelector("[data-replace-all]")?.addEventListener("click", replaceAll);
+
+  document.querySelector("[data-toggle-wrap]")?.addEventListener("click", (event) => {
+    editor.classList.toggle("is-wrapped");
+    event.currentTarget.textContent = editor.classList.contains("is-wrapped") ? "No wrap" : "Wrap";
+  });
+
+  const commandDialog = document.querySelector("[data-command-dialog]");
+  const commandInput = document.querySelector("[data-command-input]");
+  const commandList = document.querySelector("[data-command-list]");
+  const commandActions = [
+    { label: "Format current file", run: () => document.querySelector("[data-format-draft]")?.click() },
+    { label: "Save current draft", run: () => document.querySelector("[data-save-draft]")?.click() },
+    { label: "Toggle word wrap", run: () => document.querySelector("[data-toggle-wrap]")?.click() },
+    { label: "Find in current file", run: () => openFindBar(false) },
+  ];
+
+  function renderCommandList() {
+    if (!commandList) return;
+    const query = (commandInput?.value || "").toLowerCase();
+    commandList.replaceChildren();
+    const entries = [
+      ...openFiles.map((name) => ({ label: name, detail: "Open file", run: () => loadFile(name) })),
+      ...commandActions.map((action) => ({ ...action, detail: "Action" })),
+    ].filter((entry) => entry.label.toLowerCase().includes(query));
+    entries.forEach((entry) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "command-item";
+      button.innerHTML = `<span>${escapeHtml(entry.label)}</span><small>${entry.detail}</small>`;
+      button.addEventListener("click", () => {
+        entry.run();
+        commandDialog?.close();
+      });
+      commandList.append(button);
+    });
+  }
+
+  function openCommandDialog() {
+    renderCommandList();
+    commandDialog?.showModal();
+    commandInput?.focus();
+  }
+
+  document.querySelector("[data-open-command]")?.addEventListener("click", openCommandDialog);
+  document.querySelector("[data-close-command]")?.addEventListener("click", () => commandDialog?.close());
+  commandInput?.addEventListener("input", renderCommandList);
 
   /* ── Save Draft Action ── */
   document.querySelector("[data-save-draft]")?.addEventListener("click", async () => {
@@ -392,6 +564,8 @@ def write_outputs(value: int):
       });
       if (res.ok) {
         const data = await res.json();
+        dirtyFiles.delete(activeFile);
+        renderEditorTabs();
         logActivity("SAVE", `Persisted '${data.file.path}' as project version ${data.file.version}`);
         showToast(`${activeFile} saved to project version ${data.file.version}.`);
         return;
@@ -401,6 +575,8 @@ def write_outputs(value: int):
     }
 
     showToast(`${activeFile} saved to browser storage. Source remains clean.`);
+    dirtyFiles.delete(activeFile);
+    renderEditorTabs();
   });
 
   /* ── Bottom Panel Tabs ── */

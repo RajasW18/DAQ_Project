@@ -66,8 +66,20 @@
           <span class="toolbar-separator"></span>
           <span data-language-tag>Arduino C++</span>
           <span class="toolbar-spacer"></span>
+          <button type="button" data-toggle-wrap>Wrap</button>
+          <button type="button" data-toggle-find>Find</button>
           <button type="button" data-format-draft>Format</button>
           <button type="button" data-save-draft>Save draft</button>
+        </div>
+        <div class="find-bar" data-find-bar hidden>
+          <input type="search" data-find-input placeholder="Find" aria-label="Find in file" />
+          <input type="text" data-replace-input placeholder="Replace" aria-label="Replace in file" />
+          <button type="button" data-find-prev aria-label="Previous match">↑</button>
+          <button type="button" data-find-next aria-label="Next match">↓</button>
+          <button type="button" data-replace-one>Replace</button>
+          <button type="button" data-replace-all>All</button>
+          <span data-find-count>0 matches</span>
+          <button type="button" data-close-find aria-label="Close find bar">×</button>
         </div>
         <div class="editor-shell">
           <div class="editor-gutter" aria-hidden="true" data-editor-gutter></div>
@@ -162,6 +174,16 @@
         </div>
         <p class="field-hint" data-auth-status>Use Google or receive a one-time code by email.</p>
       </form>
+    </dialog>
+
+    <dialog class="command-dialog" data-command-dialog aria-labelledby="command-title">
+      <div class="dialog-head">
+        <div><p class="eyebrow">Workspace navigation</p><h2 id="command-title">Quick Open</h2></div>
+        <button class="dialog-close" type="button" data-close-command aria-label="Close quick open">×</button>
+      </div>
+      <input class="command-input" type="search" data-command-input placeholder="Search files and actions" aria-label="Search files and actions" />
+      <div class="command-list" data-command-list></div>
+      <p class="field-hint">Ctrl+P files · Ctrl+F find · Ctrl+H replace · Ctrl+/ comment</p>
     </dialog>
 
     <dialog class="profile-dialog" aria-labelledby="profile-title">
