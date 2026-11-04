@@ -119,6 +119,11 @@ https://daq-project.onrender.com/login
 Never commit `.env`, API keys, OAuth secrets, SMTP passwords, or session
 secrets. If a secret is exposed, revoke it and create a replacement.
 
+If a Groq key was pasted into an editor, screenshot, chat, or issue, treat it
+as compromised even if the file is ignored by Git. Revoke it in the Groq
+console, create a replacement, update local `.env` and Render secret
+variables, and hard-refresh/redeploy the service.
+
 ### Deployment environment
 
 | Variable | Local example | Render value |
@@ -129,6 +134,26 @@ secrets. If a secret is exposed, revoke it and create a replacement.
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | Gmail account / App Password | Render secret variables |
 | `GROQ_API_KEY` / `GEMINI_API_KEY` | Optional | Render secret variables |
 
+### Render deployment topology
+
+```mermaid
+flowchart TB
+    User["User browser"] --> Web["Render web service<br/>Docker + forgelab_server.py"]
+    Web --> Static["landing/ static UI"]
+    Web --> DB["Render PostgreSQL"]
+    Web --> OAuth["Google OAuth"]
+    Web --> SMTP["SMTP provider"]
+    Web --> Groq["Groq API"]
+    Web --> Gemini["Gemini API"]
+    Web --> Ollama["Ollama<br/>local deployments only"]
+    Web -.-> USB["Developer USB device<br/>not reachable from Render"]
+    USB --> Agent["local_agent.py<br/>127.0.0.1"]
+```
+
+Render can host the web service and PostgreSQL database, but it cannot access
+an ATmega2560 connected to a user's laptop. Device builds, serial communication,
+and flashing require the local agent on the machine that owns the USB device.
+
 ### AI providers
 
 - **ForgeLab Local Engine** is always free and requires no key.
@@ -138,6 +163,32 @@ secrets. If a secret is exposed, revoke it and create a replacement.
 
 The provider selector exposes local, Ollama, Groq, and Gemini. Keep provider
 keys on the server and do not send them from browser code.
+
+### Provider failure and fallback behavior
+
+The selected provider is attempted first. The server returns provider failures
+in the chat response instead of silently presenting a local response as if it
+came from the selected cloud provider. The local ForgeLab engine can still be
+selected explicitly for deterministic, hardware-aware behavior.
+
+```mermaid
+flowchart TD
+    Request["Authenticated chat request"] --> Provider["Selected provider"]
+    Provider -->|local| Local["ForgeLab local engine"]
+    Provider -->|ollama| Ollama["Ollama HTTP endpoint"]
+    Provider -->|groq| Groq["Groq API"]
+    Provider -->|gemini| Gemini["Gemini API"]
+    Local --> Result["Response or explicit error"]
+    Ollama --> Result
+    Groq --> Result
+    Gemini --> Result
+    Result --> Chat["Persist chat message"]
+    Chat --> UI["Render provider/status in workspace"]
+```
+
+Hosted providers are subject to model availability, request limits, and token
+limits. Use a model returned by the provider's models endpoint and keep
+prompts/context compact on free tiers.
 
 ## Full web-system architecture
 
@@ -156,6 +207,115 @@ The web database stores:
 - AI chat messages linked to the user and project
 - Audit-event records for future device/build operations
 
+```mermaid
+erDiagram
+    USER ||--o{ PROJECT : owns
+    USER ||--o{ CHAT_MESSAGE : sends
+    USER ||--o{ PROJECT_REVISION : creates
+    USER ||--o{ AUDIT_EVENT : creates
+    PROJECT ||--o{ PROJECT_FILE : contains
+    PROJECT ||--o{ PROJECT_REVISION : receives
+    PROJECT ||--o{ CHAT_MESSAGE : contains
+    PROJECT ||--o{ AUDIT_EVENT : records
+
+    USER {
+        int id PK
+        string email
+        string name
+        string auth_provider
+    }
+    PROJECT {
+        int id PK
+        int user_id FK
+        string name
+    }
+    PROJECT_FILE {
+        int id PK
+        int project_id FK
+        string path
+        text content
+        int version
+    }
+    PROJECT_REVISION {
+        int id PK
+        int project_id FK
+        string path
+        text content
+        string status
+    }
+    CHAT_MESSAGE {
+        int id PK
+        int project_id FK
+        string role
+        text content
+        string provider
+    }
+    AUDIT_EVENT {
+        int id PK
+        int project_id FK
+        string event_type
+        string details
+    }
+```
+
+### Project-file and revision lifecycle
+
+Authoritative repository files are read-only context. User edits and AI output
+are project drafts. An AI revision becomes a project file only after approval;
+rejection records the decision without changing the file.
+
+```mermaid
+stateDiagram-v2
+    [*] --> SourceContext: Load repository file
+    SourceContext --> Draft: User edits in browser
+    SourceContext --> Pending: AI creates revision
+    Draft --> Saved: Save project file
+    Pending --> Approved: User approves
+    Pending --> Rejected: User rejects
+    Approved --> Saved: Write project file + version
+    Rejected --> [*]: Keep source and project file unchanged
+    Saved --> Draft: Continue editing
+```
+
+The relevant API surface is:
+
+| Purpose | Endpoint |
+| --- | --- |
+| List projects | `GET /api/projects` |
+| Create project | `POST /api/projects` |
+| Load project files | `GET /api/project-files?project_id=<id>` |
+| Save project file | `POST /api/project-files` |
+| List revisions | `GET /api/project-revisions?project_id=<id>` |
+| Create AI revision | `POST /api/project-revisions` |
+| Approve revision | `POST /api/project-revisions/<id>/approve` |
+| Reject revision | `POST /api/project-revisions/<id>/reject` |
+| Load chat history | `GET /api/chat/history?project_id=<id>` |
+
+### Browser workspace layout
+
+The workspace is a native HTML/CSS/JavaScript IDE surface. It includes a
+project file tree, editable draft editor, reviewable artifacts,
+activity/simulation output, and an authenticated agent conversation.
+
+```mermaid
+flowchart LR
+    Files["Project files<br/>source + drafts"] --> Editor["Code editor<br/>tabs, drafts, find/replace"]
+    Editor --> Save["Save project draft"]
+    Editor --> Sim["Simulation output"]
+    Agent["Agent conversation"] --> Revision["Reviewable AI revision"]
+    Revision --> Diff["Approve / reject"]
+    Diff --> Save
+    Artifacts["Artifacts panel"] --> Diff
+    Search["Search Workspace<br/>files + content snippets"] --> Files
+```
+
+The workspace supports runtime resizing for the project file sidebar,
+editor/agent split, artifacts/activity/simulation panel, and agent conversation.
+Resize values are stored in browser `localStorage`. On small screens, handles
+are disabled and the layout switches to a stacked view. `Ctrl/Cmd+P` opens
+Search Workspace; it searches file names and project-file content, fetching
+unloaded content from the backend when available.
+
 For local hardware, run [local_agent.py](local_agent.py) on the computer with
 the ATmega2560 connected:
 
@@ -168,6 +328,27 @@ The agent listens only on `127.0.0.1`. It supports a build command and requires
 `confirm_flash=true` for a firmware upload. A browser/cloud integration should
 pair an authenticated user to this agent before sending commands; the Render
 server cannot directly access a user's USB port.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser workspace
+    participant R as Render ForgeLab server
+    participant D as Render PostgreSQL
+    participant L as Local agent
+    participant M as ATmega2560
+
+    B->>R: Authenticated project/chat request
+    R->>D: Read/write user and project data
+    R-->>B: Drafts, revisions, chat, diagnostics
+    B->>L: Paired local-agent request
+    L->>M: Build/flash/serial operation
+    M-->>L: Device result
+    L-->>B: Result after confirmation
+```
+
+The cloud service cannot reach USB devices attached to a developer's computer.
+Keep `local_agent.py` bound to `127.0.0.1`, use a long random
+`FORGELAB_AGENT_TOKEN`, and require explicit confirmation before flashing.
 
 AI chat is now authentication-protected and persisted. File writes and device
 flashing should remain approval-based: the production IDE must show a diff,

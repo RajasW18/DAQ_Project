@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="ForgeLab is an AI-assisted engineering workspace for adapting generic 16-bit I/O hardware to real instruments." />
     <title>ForgeLab | Hardware-aware AI workspace</title>
-    <link rel="stylesheet" href="styles.css?v=7" />
-    <script defer src="script.js?v=7"></script>
+    <link rel="stylesheet" href="styles.css?v=8" />
+    <script defer src="script.js?v=8"></script>
   </head>
   <body>
     <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -68,17 +68,18 @@
           <span data-language-tag>Arduino C++</span>
           <span class="toolbar-spacer"></span>
           <button type="button" data-toggle-wrap>Wrap</button>
-          <button type="button" data-toggle-find>Find</button>
+          <button type="button" class="toolbar-action toolbar-action-primary" data-toggle-find>Find &amp; replace</button>
           <button type="button" data-format-draft>Format</button>
           <button type="button" data-save-draft>Save draft</button>
         </div>
         <div class="find-bar" data-find-bar hidden>
+          <strong class="find-title">Find &amp; replace</strong>
           <input type="search" data-find-input placeholder="Find" aria-label="Find in file" />
           <input type="text" data-replace-input placeholder="Replace" aria-label="Replace in file" />
           <button type="button" data-find-prev aria-label="Previous match">↑</button>
           <button type="button" data-find-next aria-label="Next match">↓</button>
           <button type="button" data-replace-one>Replace</button>
-          <button type="button" data-replace-all>All</button>
+          <button type="button" data-replace-all>Replace all</button>
           <span data-find-count>0 matches</span>
           <button type="button" data-close-find aria-label="Close find bar">×</button>
         </div>
