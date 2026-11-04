@@ -634,6 +634,91 @@ def write_outputs(value: int):
 
   installResizeHandles();
 
+  /* ── Local Hardware Agent ── */
+  const agentUrlInput = document.querySelector("[data-agent-url]");
+  const agentTokenInput = document.querySelector("[data-agent-token]");
+  const hardwareState = document.querySelector("[data-hardware-state]");
+  const hardwareOutput = document.querySelector("[data-hardware-output]");
+  const agentControls = document.querySelectorAll("[data-agent-ping], [data-agent-status], [data-agent-build], [data-agent-flash], [data-agent-estop]");
+  let localAgentConnected = false;
+  if (agentUrlInput) agentUrlInput.value = localStorage.getItem("forgelab-agent-url") || "http://127.0.0.1:8787";
+  if (agentTokenInput) agentTokenInput.value = localStorage.getItem("forgelab-agent-token") || "";
+
+  function setHardwareState(state, message) {
+    localAgentConnected = state === "Connected";
+    if (hardwareState) hardwareState.textContent = state;
+    if (hardwareOutput) hardwareOutput.textContent = message;
+    agentControls.forEach((control) => { control.disabled = !localAgentConnected; });
+  }
+
+  function agentHeaders() {
+    return { Authorization: `Bearer ${agentTokenInput?.value.trim() || ""}`, "Content-Type": "application/json" };
+  }
+
+  async function agentRequest(path, options = {}) {
+    const base = (agentUrlInput?.value.trim() || "").replace(/\/+$/, "");
+    if (!base) throw new Error("Enter the local agent URL.");
+    const response = await fetch(`${base}${path}`, {
+      ...options,
+      headers: { ...agentHeaders(), ...(options.headers || {}) }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Local agent returned HTTP ${response.status}.`);
+    return data;
+  }
+
+  async function connectLocalAgent() {
+    try {
+      const base = (agentUrlInput?.value.trim() || "").replace(/\/+$/, "");
+      const health = await fetch(`${base}/health`);
+      if (!health.ok) throw new Error("Local agent health check failed.");
+      const device = await agentRequest("/api/device");
+      localStorage.setItem("forgelab-agent-url", base);
+      localStorage.setItem("forgelab-agent-token", agentTokenInput?.value.trim() || "");
+      setHardwareState("Connected", `${device.board} · ${device.port || "port not configured"} · ${device.baud} baud`);
+      showToast("Local hardware agent connected.");
+    } catch (error) {
+      setHardwareState("Unavailable", error.message);
+    }
+  }
+
+  async function sendHardwareLine(line, confirmHardware = false) {
+    try {
+      const result = await agentRequest("/api/command", {
+        method: "POST",
+        body: JSON.stringify({ command: "serial", line, confirm_hardware: confirmHardware })
+      });
+      if (hardwareOutput) hardwareOutput.textContent = `${result.command} → ${result.response}`;
+    } catch (error) {
+      if (hardwareOutput) hardwareOutput.textContent = error.message;
+      showToast(error.message);
+    }
+  }
+
+  document.querySelector("[data-agent-connect]")?.addEventListener("click", connectLocalAgent);
+  document.querySelector("[data-agent-ping]")?.addEventListener("click", () => sendHardwareLine("PING"));
+  document.querySelector("[data-agent-status]")?.addEventListener("click", () => sendHardwareLine("STATUS"));
+  document.querySelector("[data-agent-estop]")?.addEventListener("click", () => {
+    if (window.confirm("Stop the active sequence and drive outputs to a safe state?")) sendHardwareLine("ESTOP", true);
+  });
+  document.querySelector("[data-agent-build]")?.addEventListener("click", async () => {
+    try {
+      const result = await agentRequest("/api/command", { method: "POST", body: JSON.stringify({ command: "build" }) });
+      if (hardwareOutput) hardwareOutput.textContent = result.success ? "Build completed successfully." : (result.stderr || "Build failed.");
+    } catch (error) {
+      if (hardwareOutput) hardwareOutput.textContent = error.message;
+    }
+  });
+  document.querySelector("[data-agent-flash]")?.addEventListener("click", async () => {
+    if (!window.confirm("Flash the currently built firmware to the connected ATmega2560?")) return;
+    try {
+      const result = await agentRequest("/api/command", { method: "POST", body: JSON.stringify({ command: "flash", confirm_flash: true }) });
+      if (hardwareOutput) hardwareOutput.textContent = result.success ? "Firmware upload completed." : (result.stderr || "Firmware upload failed.");
+    } catch (error) {
+      if (hardwareOutput) hardwareOutput.textContent = error.message;
+    }
+  });
+
   /* ── Save Draft Action ── */
   document.querySelector("[data-save-draft]")?.addEventListener("click", async () => {
     files[activeFile] = editor.value;

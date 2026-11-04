@@ -116,6 +116,30 @@ Open the deployed login page at:
 https://daq-project.onrender.com/login
 ```
 
+### Production release checklist
+
+1. Revoke any API key that has appeared in an editor, screenshot, chat, or
+   issue. Generate replacement keys and store them only in Render secret
+   environment variables.
+2. Push `render.yaml`, `Dockerfile`, `requirements.txt`, the application
+   source, and the `landing/` assets to GitHub.
+3. In Render, create a **Blueprint** from the repository. The blueprint creates
+   the Docker web service and PostgreSQL database.
+4. Set `FRONTEND_URL` and `GOOGLE_REDIRECT_URI` to the final Render hostname.
+5. Add the same Google callback URL in Google Cloud Console.
+6. Configure `AUTH_SECRET`, SMTP credentials, and optional AI provider keys in
+   Render. Do not paste them into tracked files.
+7. Deploy, then verify `/api/health`, `/login`, Google sign-in, email OTP, a
+   project save, and a provider request.
+8. For physical hardware, run `local_agent.py` separately on the USB-connected
+   computer. Render does not contain or access the board.
+
+The web deployment is complete when Render reports a healthy service and
+`https://<service>.onrender.com/api/health` returns JSON with `"status":
+"online"`. The hardware deployment is complete only after the local workspace
+connects to the agent, `STATUS` returns from the board, a PlatformIO build
+succeeds, and flashing is explicitly confirmed.
+
 Never commit `.env`, API keys, OAuth secrets, SMTP passwords, or session
 secrets. If a secret is exposed, revoke it and create a replacement.
 
@@ -328,6 +352,67 @@ The agent listens only on `127.0.0.1`. It supports a build command and requires
 `confirm_flash=true` for a firmware upload. A browser/cloud integration should
 pair an authenticated user to this agent before sending commands; the Render
 server cannot directly access a user's USB port.
+
+### Pairing the browser workspace with hardware
+
+On the computer connected to the ATmega2560, configure the serial port and
+start the local agent:
+
+```powershell
+$env:FORGELAB_AGENT_TOKEN = "generate-a-long-random-token"
+$env:FORGELAB_SERIAL_PORT = "COM7"
+$env:FORGELAB_SERIAL_BAUD = "9600"
+.\.venv\Scripts\python.exe local_agent.py
+```
+
+Replace `COM7` with the port shown by Windows Device Manager. The firmware,
+PlatformIO monitor, local agent, and any host serial driver must use the same
+baud rate. The default universal firmware configuration is `9600`.
+
+In the browser workspace, open **Local hardware**, enter:
+
+1. `http://127.0.0.1:8787` as the agent URL
+2. The exact `FORGELAB_AGENT_TOKEN`
+3. Click **Connect**
+
+The panel then exposes:
+
+- **Ping** and **Status** for read-only controller checks
+- **Build** for a local PlatformIO build
+- **E-stop** to send `ESTOP` after confirmation
+- **Flash approved firmware** after an explicit confirmation
+
+The browser talks directly to the local agent. Render never receives the
+USB connection or the agent token. The local agent allows read-only `PING` and
+`STATUS` without hardware confirmation; all other serial commands require
+`confirm_hardware=true`, and flashing separately requires `confirm_flash=true`.
+
+```mermaid
+sequenceDiagram
+    participant W as Browser workspace
+    participant A as local_agent.py
+    participant P as PlatformIO
+    participant M as ATmega2560
+
+    W->>A: GET /health
+    W->>A: GET /api/device + Bearer token
+    A-->>W: Board, port, baud, status
+    W->>A: POST /api/command {command: build}
+    A->>P: pio run --project-dir firmware
+    P-->>A: Build result
+    A-->>W: Build output
+    W->>A: POST serial {line: PING}
+    A->>M: PING
+    M-->>A: PONG
+    A-->>W: Controller response
+    W->>A: POST flash {confirm_flash: true}
+    A->>P: pio run --target upload
+    P->>M: Upload firmware
+```
+
+For production, pair only from a trusted browser and rotate the agent token
+if it is exposed. Do not bind the local agent to `0.0.0.0` or forward port
+8787 to the public internet.
 
 ```mermaid
 sequenceDiagram

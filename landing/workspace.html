@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="ForgeLab is an AI-assisted engineering workspace for adapting generic 16-bit I/O hardware to real instruments." />
     <title>ForgeLab | Hardware-aware AI workspace</title>
-    <link rel="stylesheet" href="styles.css?v=8" />
-    <script defer src="script.js?v=8"></script>
+    <link rel="stylesheet" href="styles.css?v=9" />
+    <script defer src="script.js?v=9"></script>
   </head>
   <body>
     <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -136,6 +136,24 @@
             <option value="gemini">Google Gemini (Free tier)</option>
           </select>
         </div>
+        <section class="hardware-panel" aria-label="Local hardware connection">
+          <div class="hardware-panel-head"><strong>Local hardware</strong><span data-hardware-state>Not paired</span></div>
+          <div class="hardware-fields">
+            <input type="url" data-agent-url placeholder="http://127.0.0.1:8787" aria-label="Local agent URL" />
+            <input type="password" data-agent-token placeholder="Agent token" aria-label="Local agent token" />
+          </div>
+          <div class="hardware-actions">
+            <button type="button" data-agent-connect>Connect</button>
+            <button type="button" data-agent-ping disabled>Ping</button>
+            <button type="button" data-agent-status disabled>Status</button>
+            <button type="button" data-agent-build disabled>Build</button>
+            <button type="button" class="hardware-danger" data-agent-estop disabled>E-stop</button>
+          </div>
+          <div class="hardware-actions">
+            <button type="button" data-agent-flash disabled>Flash approved firmware</button>
+          </div>
+          <p class="field-hint" data-hardware-output>USB actions run on the computer hosting the local agent.</p>
+        </section>
         <div class="context-strip"><span>Context loaded</span><strong data-context-count>8 files</strong><span>•</span><span data-context-board>16-bit I/O</span></div>
         <div class="agent-thread" data-agent-thread>
           <div class="agent-message">

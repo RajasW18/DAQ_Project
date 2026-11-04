@@ -209,6 +209,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .agent-live { margin-left: auto !important; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted) !important; font: 9px Consolas, monospace !important; transition: all 0.25s ease; }
 .context-strip { gap: 7px; margin: 12px 15px 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-subtle); color: var(--muted); font: 10px Consolas, monospace; flex-shrink: 0; }
 .context-strip strong { color: var(--text); }
+.hardware-panel { margin: 8px 15px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-subtle); flex-shrink: 0; }
+.hardware-panel-head { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.hardware-panel-head span { color: var(--muted); font: 9px Consolas, monospace; }
+.hardware-fields { display: grid; gap: 5px; margin-top: 8px; }
+.hardware-fields input { min-width: 0; padding: 6px 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--code); color: var(--text); font: 10px Consolas, monospace; }
+.hardware-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.hardware-actions button { padding: 5px 7px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); font: 9px Consolas, monospace; }
+.hardware-actions button:hover:not(:disabled) { border-color: var(--focus); color: var(--text); }
+.hardware-actions button:disabled { cursor: not-allowed; opacity: .45; }
+.hardware-actions .hardware-danger { border-color: var(--danger); color: var(--danger); }
+.hardware-panel .field-hint { margin: 7px 0 0; font-size: 9px; }
 
 /* ── Modern Chat Thread & Fluid Messages ── */
 .agent-thread {
