@@ -81,6 +81,7 @@ def write_outputs(value: int):
   let activeFile = "firmware.ino";
   let openFiles = ["firmware.ino"];
   const dirtyFiles = new Set();
+  let workspaceFileNames = Object.keys(files);
   const artifacts = [
     { name: "draft-firmware.ino", type: "ino", summary: "Reviewable firmware draft", status: "review" },
     { name: "wiring-notes.md", type: "md", summary: "Generated integration notes", status: "ready" }
@@ -217,6 +218,7 @@ def write_outputs(value: int):
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.files && data.files.length) {
+        workspaceFileNames = data.files.map((file) => file.name);
         renderFileTree(data.files);
         if (!files[activeFile]) await loadFile(data.files[0].name);
         logActivity("SYNC", `Loaded ${data.files.length} workspace files from backend`);
@@ -521,9 +523,14 @@ def write_outputs(value: int):
     const query = (commandInput?.value || "").toLowerCase();
     commandList.replaceChildren();
     const entries = [
-      ...openFiles.map((name) => ({ label: name, detail: "Open file", run: () => loadFile(name) })),
+      ...workspaceFileNames.map((name) => {
+        const content = files[name] || "";
+        const contentMatch = query && content.toLowerCase().includes(query);
+        const detail = contentMatch ? `Text match · ${content.slice(Math.max(0, content.toLowerCase().indexOf(query) - 24), content.toLowerCase().indexOf(query) + query.length + 36).replace(/\s+/g, " ")}` : "Project file";
+        return { label: name, detail, run: () => loadFile(name) };
+      }),
       ...commandActions.map((action) => ({ ...action, detail: "Action" })),
-    ].filter((entry) => entry.label.toLowerCase().includes(query));
+    ].filter((entry) => !query || entry.label.toLowerCase().includes(query) || entry.detail.toLowerCase().includes(query));
     entries.forEach((entry) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -545,7 +552,87 @@ def write_outputs(value: int):
 
   document.querySelector("[data-open-command]")?.addEventListener("click", openCommandDialog);
   document.querySelector("[data-close-command]")?.addEventListener("click", () => commandDialog?.close());
-  commandInput?.addEventListener("input", renderCommandList);
+  commandInput?.addEventListener("input", async () => {
+    renderCommandList();
+    const query = commandInput.value.trim().toLowerCase();
+    if (!query) return;
+    await Promise.all(workspaceFileNames.map(async (name) => {
+      if (files[name]) return;
+      try {
+        const response = await fetch(`${API_BASE}/api/file/${encodeURIComponent(name)}`);
+        if (response.ok) {
+          const data = await response.json();
+          files[name] = data.content;
+        }
+      } catch {
+        // File-name search remains available when the backend is offline.
+      }
+    }));
+    if (commandInput.value.trim().toLowerCase() === query) renderCommandList();
+  });
+
+  function installResizeHandles() {
+    const workspace = document.querySelector(".workspace");
+    if (!workspace) return;
+    const savedSidebar = Number(localStorage.getItem("forgelab-sidebar-width"));
+    const savedAgent = Number(localStorage.getItem("forgelab-agent-width"));
+    if (savedSidebar) workspace.style.setProperty("--sidebar-width", `${savedSidebar}px`);
+    if (savedAgent) workspace.style.setProperty("--agent-width", `${savedAgent}px`);
+    const editorArea = document.querySelector(".editor-area");
+    const savedBottom = Number(localStorage.getItem("forgelab-bottom-panel-height"));
+    if (savedBottom && editorArea) editorArea.style.setProperty("--bottom-panel-height", `${savedBottom}px`);
+
+    document.querySelectorAll("[data-resize]").forEach((handle) => {
+      handle.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        handle.classList.add("is-dragging");
+        const type = handle.dataset.resize;
+        const move = (moveEvent) => {
+          if (type === "sidebar" || type === "agent") {
+            const rect = workspace.getBoundingClientRect();
+            if (type === "sidebar") {
+              const width = Math.min(420, Math.max(180, moveEvent.clientX - rect.left));
+              workspace.style.setProperty("--sidebar-width", `${width}px`);
+              localStorage.setItem("forgelab-sidebar-width", String(width));
+            } else {
+              const width = Math.min(520, Math.max(280, rect.right - moveEvent.clientX));
+              workspace.style.setProperty("--agent-width", `${width}px`);
+              localStorage.setItem("forgelab-agent-width", String(width));
+            }
+          } else if (type === "bottom-panel" && editorArea) {
+            const rect = editorArea.getBoundingClientRect();
+            const height = Math.min(420, Math.max(110, rect.bottom - moveEvent.clientY));
+            editorArea.style.setProperty("--bottom-panel-height", `${height}px`);
+            localStorage.setItem("forgelab-bottom-panel-height", String(height));
+          } else if (type === "agent-chat") {
+            const thread = document.querySelector("[data-agent-thread]");
+            const sidebar = document.querySelector(".agent-sidebar");
+            if (!thread || !sidebar) return;
+            const rect = sidebar.getBoundingClientRect();
+            const height = Math.min(rect.height - 210, Math.max(140, moveEvent.clientY - rect.top - 100));
+            thread.style.flex = `0 0 ${height}px`;
+            localStorage.setItem("forgelab-agent-thread-height", String(height));
+          }
+        };
+        const stop = () => {
+          handle.classList.remove("is-dragging");
+          handle.releasePointerCapture(event.pointerId);
+          handle.removeEventListener("pointermove", move);
+          handle.removeEventListener("pointerup", stop);
+          handle.removeEventListener("pointercancel", stop);
+        };
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", stop);
+        handle.addEventListener("pointercancel", stop);
+      });
+    });
+    const savedThread = Number(localStorage.getItem("forgelab-agent-thread-height"));
+    const thread = document.querySelector("[data-agent-thread]");
+    if (savedThread && thread) thread.style.flex = `0 0 ${savedThread}px`;
+  }
+
+  installResizeHandles();
 
   /* ── Save Draft Action ── */
   document.querySelector("[data-save-draft]")?.addEventListener("click", async () => {

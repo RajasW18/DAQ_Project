@@ -55,6 +55,7 @@
           <button class="outline-button" type="button" data-open-command>⌘ Search workspace</button>
         </div>
       </aside>
+      <div class="resize-handle resize-handle-column" data-resize="sidebar" role="separator" aria-label="Resize project files panel" tabindex="0"></div>
 
       <section class="editor-area" aria-label="Code editor">
         <div class="editor-tabs" data-editor-tabs>
@@ -86,6 +87,7 @@
           <textarea class="editor" aria-label="Firmware editor. Editable draft." spellcheck="false" data-editor></textarea>
         </div>
         <div class="editor-status"><span data-cursor-pos>Ln 1, Col 1</span><span>UTF-8</span><span>Spaces: 2</span><span class="status-ready" data-syntax-status>Ready</span></div>
+        <div class="resize-handle resize-handle-row" data-resize="bottom-panel" role="separator" aria-label="Resize bottom panel" tabindex="0"></div>
         <div class="bottom-panel">
           <div class="panel-tabs">
             <button class="panel-tab is-active" type="button" data-tab-target="artifacts">Artifacts <span data-artifact-count>2</span></button>
@@ -116,6 +118,7 @@
           </div>
         </div>
       </section>
+      <div class="resize-handle resize-handle-column" data-resize="agent" role="separator" aria-label="Resize agent panel" tabindex="0"></div>
 
       <aside class="agent-sidebar" aria-label="ForgeLab agent">
         <div class="agent-heading">
@@ -143,6 +146,7 @@
             <div class="task-detail" data-task-detail>firmware.ino · hal_mcu.h · instrument_config.json · calibration.csv</div>
           </div>
         </div>
+        <div class="resize-handle resize-handle-row" data-resize="agent-chat" role="separator" aria-label="Resize agent conversation" tabindex="0"></div>
         <div class="quick-prompts">
           <span>Try asking</span>
           <button type="button" data-prompt="Explain how the 16-bit output map works.">Explain the output map</button>
